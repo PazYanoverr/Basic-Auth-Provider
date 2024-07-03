@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { CredentialService } from "../credential.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { CredentialCreateInput } from "./CredentialCreateInput";
 import { Credential } from "./Credential";
 import { CredentialFindManyArgs } from "./CredentialFindManyArgs";
@@ -26,10 +30,24 @@ import { DestinationCalendarFindManyArgs } from "../../destinationCalendar/base/
 import { DestinationCalendar } from "../../destinationCalendar/base/DestinationCalendar";
 import { DestinationCalendarWhereUniqueInput } from "../../destinationCalendar/base/DestinationCalendarWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class CredentialControllerBase {
-  constructor(protected readonly service: CredentialService) {}
+  constructor(
+    protected readonly service: CredentialService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Credential })
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createCredential(
     @common.Body() data: CredentialCreateInput
   ): Promise<Credential> {
@@ -69,9 +87,18 @@ export class CredentialControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Credential] })
   @ApiNestedQuery(CredentialFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async credentials(@common.Req() request: Request): Promise<Credential[]> {
     const args = plainToClass(CredentialFindManyArgs, request.query);
     return this.service.credentials({
@@ -96,9 +123,18 @@ export class CredentialControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Credential })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async credential(
     @common.Param() params: CredentialWhereUniqueInput
   ): Promise<Credential | null> {
@@ -130,9 +166,18 @@ export class CredentialControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Credential })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateCredential(
     @common.Param() params: CredentialWhereUniqueInput,
     @common.Body() data: CredentialUpdateInput
@@ -186,6 +231,14 @@ export class CredentialControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Credential })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteCredential(
     @common.Param() params: CredentialWhereUniqueInput
   ): Promise<Credential | null> {
@@ -220,8 +273,14 @@ export class CredentialControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/destinationCalendars")
   @ApiNestedQuery(DestinationCalendarFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "read",
+    possession: "any",
+  })
   async findDestinationCalendars(
     @common.Req() request: Request,
     @common.Param() params: CredentialWhereUniqueInput
@@ -268,6 +327,11 @@ export class CredentialControllerBase {
   }
 
   @common.Post("/:id/destinationCalendars")
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "update",
+    possession: "any",
+  })
   async connectDestinationCalendars(
     @common.Param() params: CredentialWhereUniqueInput,
     @common.Body() body: DestinationCalendarWhereUniqueInput[]
@@ -285,6 +349,11 @@ export class CredentialControllerBase {
   }
 
   @common.Patch("/:id/destinationCalendars")
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "update",
+    possession: "any",
+  })
   async updateDestinationCalendars(
     @common.Param() params: CredentialWhereUniqueInput,
     @common.Body() body: DestinationCalendarWhereUniqueInput[]
@@ -302,6 +371,11 @@ export class CredentialControllerBase {
   }
 
   @common.Delete("/:id/destinationCalendars")
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "update",
+    possession: "any",
+  })
   async disconnectDestinationCalendars(
     @common.Param() params: CredentialWhereUniqueInput,
     @common.Body() body: DestinationCalendarWhereUniqueInput[]

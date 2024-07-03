@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { SelectedCalendar } from "./SelectedCalendar";
 import { SelectedCalendarCountArgs } from "./SelectedCalendarCountArgs";
 import { SelectedCalendarFindManyArgs } from "./SelectedCalendarFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateSelectedCalendarArgs } from "./UpdateSelectedCalendarArgs";
 import { DeleteSelectedCalendarArgs } from "./DeleteSelectedCalendarArgs";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { SelectedCalendarService } from "../selectedCalendar.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => SelectedCalendar)
 export class SelectedCalendarResolverBase {
-  constructor(protected readonly service: SelectedCalendarService) {}
+  constructor(
+    protected readonly service: SelectedCalendarService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "read",
+    possession: "any",
+  })
   async _selectedCalendarsMeta(
     @graphql.Args() args: SelectedCalendarCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class SelectedCalendarResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [SelectedCalendar])
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "read",
+    possession: "any",
+  })
   async selectedCalendars(
     @graphql.Args() args: SelectedCalendarFindManyArgs
   ): Promise<SelectedCalendar[]> {
     return this.service.selectedCalendars(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => SelectedCalendar, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "read",
+    possession: "own",
+  })
   async selectedCalendar(
     @graphql.Args() args: SelectedCalendarFindUniqueArgs
   ): Promise<SelectedCalendar | null> {
@@ -53,7 +81,13 @@ export class SelectedCalendarResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => SelectedCalendar)
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "create",
+    possession: "any",
+  })
   async createSelectedCalendar(
     @graphql.Args() args: CreateSelectedCalendarArgs
   ): Promise<SelectedCalendar> {
@@ -69,7 +103,13 @@ export class SelectedCalendarResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => SelectedCalendar)
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "update",
+    possession: "any",
+  })
   async updateSelectedCalendar(
     @graphql.Args() args: UpdateSelectedCalendarArgs
   ): Promise<SelectedCalendar | null> {
@@ -95,6 +135,11 @@ export class SelectedCalendarResolverBase {
   }
 
   @graphql.Mutation(() => SelectedCalendar)
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "delete",
+    possession: "any",
+  })
   async deleteSelectedCalendar(
     @graphql.Args() args: DeleteSelectedCalendarArgs
   ): Promise<SelectedCalendar | null> {
@@ -110,9 +155,15 @@ export class SelectedCalendarResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(
     @graphql.Parent() parent: SelectedCalendar

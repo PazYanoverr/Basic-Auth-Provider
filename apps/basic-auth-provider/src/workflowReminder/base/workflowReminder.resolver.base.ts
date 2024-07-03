@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { WorkflowReminder } from "./WorkflowReminder";
 import { WorkflowReminderCountArgs } from "./WorkflowReminderCountArgs";
 import { WorkflowReminderFindManyArgs } from "./WorkflowReminderFindManyArgs";
@@ -23,10 +29,20 @@ import { DeleteWorkflowReminderArgs } from "./DeleteWorkflowReminderArgs";
 import { Booking } from "../../booking/base/Booking";
 import { WorkflowStep } from "../../workflowStep/base/WorkflowStep";
 import { WorkflowReminderService } from "../workflowReminder.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => WorkflowReminder)
 export class WorkflowReminderResolverBase {
-  constructor(protected readonly service: WorkflowReminderService) {}
+  constructor(
+    protected readonly service: WorkflowReminderService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "read",
+    possession: "any",
+  })
   async _workflowRemindersMeta(
     @graphql.Args() args: WorkflowReminderCountArgs
   ): Promise<MetaQueryPayload> {
@@ -36,14 +52,26 @@ export class WorkflowReminderResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [WorkflowReminder])
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "read",
+    possession: "any",
+  })
   async workflowReminders(
     @graphql.Args() args: WorkflowReminderFindManyArgs
   ): Promise<WorkflowReminder[]> {
     return this.service.workflowReminders(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => WorkflowReminder, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "read",
+    possession: "own",
+  })
   async workflowReminder(
     @graphql.Args() args: WorkflowReminderFindUniqueArgs
   ): Promise<WorkflowReminder | null> {
@@ -54,7 +82,13 @@ export class WorkflowReminderResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => WorkflowReminder)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "create",
+    possession: "any",
+  })
   async createWorkflowReminder(
     @graphql.Args() args: CreateWorkflowReminderArgs
   ): Promise<WorkflowReminder> {
@@ -76,7 +110,13 @@ export class WorkflowReminderResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => WorkflowReminder)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "update",
+    possession: "any",
+  })
   async updateWorkflowReminder(
     @graphql.Args() args: UpdateWorkflowReminderArgs
   ): Promise<WorkflowReminder | null> {
@@ -108,6 +148,11 @@ export class WorkflowReminderResolverBase {
   }
 
   @graphql.Mutation(() => WorkflowReminder)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "delete",
+    possession: "any",
+  })
   async deleteWorkflowReminder(
     @graphql.Args() args: DeleteWorkflowReminderArgs
   ): Promise<WorkflowReminder | null> {
@@ -123,9 +168,15 @@ export class WorkflowReminderResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Booking, {
     nullable: true,
     name: "booking",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
   })
   async getBooking(
     @graphql.Parent() parent: WorkflowReminder
@@ -138,9 +189,15 @@ export class WorkflowReminderResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => WorkflowStep, {
     nullable: true,
     name: "workflowStep",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "read",
+    possession: "any",
   })
   async getWorkflowStep(
     @graphql.Parent() parent: WorkflowReminder

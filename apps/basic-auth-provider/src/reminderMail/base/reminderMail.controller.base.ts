@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ReminderMailService } from "../reminderMail.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ReminderMailCreateInput } from "./ReminderMailCreateInput";
 import { ReminderMail } from "./ReminderMail";
 import { ReminderMailFindManyArgs } from "./ReminderMailFindManyArgs";
 import { ReminderMailWhereUniqueInput } from "./ReminderMailWhereUniqueInput";
 import { ReminderMailUpdateInput } from "./ReminderMailUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ReminderMailControllerBase {
-  constructor(protected readonly service: ReminderMailService) {}
+  constructor(
+    protected readonly service: ReminderMailService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: ReminderMail })
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createReminderMail(
     @common.Body() data: ReminderMailCreateInput
   ): Promise<ReminderMail> {
@@ -42,9 +60,18 @@ export class ReminderMailControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [ReminderMail] })
   @ApiNestedQuery(ReminderMailFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async reminderMails(@common.Req() request: Request): Promise<ReminderMail[]> {
     const args = plainToClass(ReminderMailFindManyArgs, request.query);
     return this.service.reminderMails({
@@ -59,9 +86,18 @@ export class ReminderMailControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: ReminderMail })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async reminderMail(
     @common.Param() params: ReminderMailWhereUniqueInput
   ): Promise<ReminderMail | null> {
@@ -83,9 +119,18 @@ export class ReminderMailControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: ReminderMail })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateReminderMail(
     @common.Param() params: ReminderMailWhereUniqueInput,
     @common.Body() data: ReminderMailUpdateInput
@@ -115,6 +160,14 @@ export class ReminderMailControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: ReminderMail })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteReminderMail(
     @common.Param() params: ReminderMailWhereUniqueInput
   ): Promise<ReminderMail | null> {

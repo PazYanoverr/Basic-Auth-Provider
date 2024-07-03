@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ImpersonationService } from "../impersonation.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ImpersonationCreateInput } from "./ImpersonationCreateInput";
 import { Impersonation } from "./Impersonation";
 import { ImpersonationFindManyArgs } from "./ImpersonationFindManyArgs";
 import { ImpersonationWhereUniqueInput } from "./ImpersonationWhereUniqueInput";
 import { ImpersonationUpdateInput } from "./ImpersonationUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ImpersonationControllerBase {
-  constructor(protected readonly service: ImpersonationService) {}
+  constructor(
+    protected readonly service: ImpersonationService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Impersonation })
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createImpersonation(
     @common.Body() data: ImpersonationCreateInput
   ): Promise<Impersonation> {
@@ -61,9 +79,18 @@ export class ImpersonationControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Impersonation] })
   @ApiNestedQuery(ImpersonationFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async impersonations(
     @common.Req() request: Request
   ): Promise<Impersonation[]> {
@@ -89,9 +116,18 @@ export class ImpersonationControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Impersonation })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async impersonation(
     @common.Param() params: ImpersonationWhereUniqueInput
   ): Promise<Impersonation | null> {
@@ -122,9 +158,18 @@ export class ImpersonationControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Impersonation })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateImpersonation(
     @common.Param() params: ImpersonationWhereUniqueInput,
     @common.Body() data: ImpersonationUpdateInput
@@ -173,6 +218,14 @@ export class ImpersonationControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Impersonation })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteImpersonation(
     @common.Param() params: ImpersonationWhereUniqueInput
   ): Promise<Impersonation | null> {

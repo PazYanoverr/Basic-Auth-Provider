@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { WorkflowStepService } from "../workflowStep.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { WorkflowStepCreateInput } from "./WorkflowStepCreateInput";
 import { WorkflowStep } from "./WorkflowStep";
 import { WorkflowStepFindManyArgs } from "./WorkflowStepFindManyArgs";
@@ -26,10 +30,24 @@ import { WorkflowReminderFindManyArgs } from "../../workflowReminder/base/Workfl
 import { WorkflowReminder } from "../../workflowReminder/base/WorkflowReminder";
 import { WorkflowReminderWhereUniqueInput } from "../../workflowReminder/base/WorkflowReminderWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class WorkflowStepControllerBase {
-  constructor(protected readonly service: WorkflowStepService) {}
+  constructor(
+    protected readonly service: WorkflowStepService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: WorkflowStep })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createWorkflowStep(
     @common.Body() data: WorkflowStepCreateInput
   ): Promise<WorkflowStep> {
@@ -59,9 +77,18 @@ export class WorkflowStepControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [WorkflowStep] })
   @ApiNestedQuery(WorkflowStepFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async workflowSteps(@common.Req() request: Request): Promise<WorkflowStep[]> {
     const args = plainToClass(WorkflowStepFindManyArgs, request.query);
     return this.service.workflowSteps({
@@ -84,9 +111,18 @@ export class WorkflowStepControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: WorkflowStep })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async workflowStep(
     @common.Param() params: WorkflowStepWhereUniqueInput
   ): Promise<WorkflowStep | null> {
@@ -116,9 +152,18 @@ export class WorkflowStepControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: WorkflowStep })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateWorkflowStep(
     @common.Param() params: WorkflowStepWhereUniqueInput,
     @common.Body() data: WorkflowStepUpdateInput
@@ -162,6 +207,14 @@ export class WorkflowStepControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: WorkflowStep })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteWorkflowStep(
     @common.Param() params: WorkflowStepWhereUniqueInput
   ): Promise<WorkflowStep | null> {
@@ -194,8 +247,14 @@ export class WorkflowStepControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/workflowReminders")
   @ApiNestedQuery(WorkflowReminderFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "read",
+    possession: "any",
+  })
   async findWorkflowReminders(
     @common.Req() request: Request,
     @common.Param() params: WorkflowStepWhereUniqueInput
@@ -232,6 +291,11 @@ export class WorkflowStepControllerBase {
   }
 
   @common.Post("/:id/workflowReminders")
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "update",
+    possession: "any",
+  })
   async connectWorkflowReminders(
     @common.Param() params: WorkflowStepWhereUniqueInput,
     @common.Body() body: WorkflowReminderWhereUniqueInput[]
@@ -249,6 +313,11 @@ export class WorkflowStepControllerBase {
   }
 
   @common.Patch("/:id/workflowReminders")
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "update",
+    possession: "any",
+  })
   async updateWorkflowReminders(
     @common.Param() params: WorkflowStepWhereUniqueInput,
     @common.Body() body: WorkflowReminderWhereUniqueInput[]
@@ -266,6 +335,11 @@ export class WorkflowStepControllerBase {
   }
 
   @common.Delete("/:id/workflowReminders")
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "update",
+    possession: "any",
+  })
   async disconnectWorkflowReminders(
     @common.Param() params: WorkflowStepWhereUniqueInput,
     @common.Body() body: WorkflowReminderWhereUniqueInput[]

@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { VerificationTokenService } from "../verificationToken.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { VerificationTokenCreateInput } from "./VerificationTokenCreateInput";
 import { VerificationToken } from "./VerificationToken";
 import { VerificationTokenFindManyArgs } from "./VerificationTokenFindManyArgs";
 import { VerificationTokenWhereUniqueInput } from "./VerificationTokenWhereUniqueInput";
 import { VerificationTokenUpdateInput } from "./VerificationTokenUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class VerificationTokenControllerBase {
-  constructor(protected readonly service: VerificationTokenService) {}
+  constructor(
+    protected readonly service: VerificationTokenService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: VerificationToken })
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createVerificationToken(
     @common.Body() data: VerificationTokenCreateInput
   ): Promise<VerificationToken> {
@@ -43,9 +61,18 @@ export class VerificationTokenControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [VerificationToken] })
   @ApiNestedQuery(VerificationTokenFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async verificationTokens(
     @common.Req() request: Request
   ): Promise<VerificationToken[]> {
@@ -63,9 +90,18 @@ export class VerificationTokenControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: VerificationToken })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async verificationToken(
     @common.Param() params: VerificationTokenWhereUniqueInput
   ): Promise<VerificationToken | null> {
@@ -88,9 +124,18 @@ export class VerificationTokenControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: VerificationToken })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateVerificationToken(
     @common.Param() params: VerificationTokenWhereUniqueInput,
     @common.Body() data: VerificationTokenUpdateInput
@@ -121,6 +166,14 @@ export class VerificationTokenControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: VerificationToken })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteVerificationToken(
     @common.Param() params: VerificationTokenWhereUniqueInput
   ): Promise<VerificationToken | null> {

@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Availability } from "./Availability";
 import { AvailabilityCountArgs } from "./AvailabilityCountArgs";
 import { AvailabilityFindManyArgs } from "./AvailabilityFindManyArgs";
@@ -24,10 +30,20 @@ import { EventType } from "../../eventType/base/EventType";
 import { Schedule } from "../../schedule/base/Schedule";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { AvailabilityService } from "../availability.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Availability)
 export class AvailabilityResolverBase {
-  constructor(protected readonly service: AvailabilityService) {}
+  constructor(
+    protected readonly service: AvailabilityService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "read",
+    possession: "any",
+  })
   async _availabilitiesMeta(
     @graphql.Args() args: AvailabilityCountArgs
   ): Promise<MetaQueryPayload> {
@@ -37,14 +53,26 @@ export class AvailabilityResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Availability])
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "read",
+    possession: "any",
+  })
   async availabilities(
     @graphql.Args() args: AvailabilityFindManyArgs
   ): Promise<Availability[]> {
     return this.service.availabilities(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Availability, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "read",
+    possession: "own",
+  })
   async availability(
     @graphql.Args() args: AvailabilityFindUniqueArgs
   ): Promise<Availability | null> {
@@ -55,7 +83,13 @@ export class AvailabilityResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Availability)
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "create",
+    possession: "any",
+  })
   async createAvailability(
     @graphql.Args() args: CreateAvailabilityArgs
   ): Promise<Availability> {
@@ -85,7 +119,13 @@ export class AvailabilityResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Availability)
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "update",
+    possession: "any",
+  })
   async updateAvailability(
     @graphql.Args() args: UpdateAvailabilityArgs
   ): Promise<Availability | null> {
@@ -125,6 +165,11 @@ export class AvailabilityResolverBase {
   }
 
   @graphql.Mutation(() => Availability)
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "delete",
+    possession: "any",
+  })
   async deleteAvailability(
     @graphql.Args() args: DeleteAvailabilityArgs
   ): Promise<Availability | null> {
@@ -140,9 +185,15 @@ export class AvailabilityResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => EventType, {
     nullable: true,
     name: "eventType",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
   })
   async getEventType(
     @graphql.Parent() parent: Availability
@@ -155,9 +206,15 @@ export class AvailabilityResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Schedule, {
     nullable: true,
     name: "schedule",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "read",
+    possession: "any",
   })
   async getSchedule(
     @graphql.Parent() parent: Availability
@@ -170,9 +227,15 @@ export class AvailabilityResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(
     @graphql.Parent() parent: Availability

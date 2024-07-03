@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Credential } from "./Credential";
 import { CredentialCountArgs } from "./CredentialCountArgs";
 import { CredentialFindManyArgs } from "./CredentialFindManyArgs";
@@ -25,10 +31,20 @@ import { DestinationCalendar } from "../../destinationCalendar/base/DestinationC
 import { AppModel } from "../../appModel/base/AppModel";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { CredentialService } from "../credential.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Credential)
 export class CredentialResolverBase {
-  constructor(protected readonly service: CredentialService) {}
+  constructor(
+    protected readonly service: CredentialService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "any",
+  })
   async _credentialsMeta(
     @graphql.Args() args: CredentialCountArgs
   ): Promise<MetaQueryPayload> {
@@ -38,14 +54,26 @@ export class CredentialResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Credential])
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "any",
+  })
   async credentials(
     @graphql.Args() args: CredentialFindManyArgs
   ): Promise<Credential[]> {
     return this.service.credentials(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Credential, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "own",
+  })
   async credential(
     @graphql.Args() args: CredentialFindUniqueArgs
   ): Promise<Credential | null> {
@@ -56,7 +84,13 @@ export class CredentialResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Credential)
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "create",
+    possession: "any",
+  })
   async createCredential(
     @graphql.Args() args: CreateCredentialArgs
   ): Promise<Credential> {
@@ -80,7 +114,13 @@ export class CredentialResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Credential)
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "update",
+    possession: "any",
+  })
   async updateCredential(
     @graphql.Args() args: UpdateCredentialArgs
   ): Promise<Credential | null> {
@@ -114,6 +154,11 @@ export class CredentialResolverBase {
   }
 
   @graphql.Mutation(() => Credential)
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "delete",
+    possession: "any",
+  })
   async deleteCredential(
     @graphql.Args() args: DeleteCredentialArgs
   ): Promise<Credential | null> {
@@ -129,8 +174,14 @@ export class CredentialResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [DestinationCalendar], {
     name: "destinationCalendars",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "read",
+    possession: "any",
   })
   async findDestinationCalendars(
     @graphql.Parent() parent: Credential,
@@ -148,9 +199,15 @@ export class CredentialResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => AppModel, {
     nullable: true,
     name: "appField",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "read",
+    possession: "any",
   })
   async getAppField(
     @graphql.Parent() parent: Credential
@@ -163,9 +220,15 @@ export class CredentialResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(
     @graphql.Parent() parent: Credential

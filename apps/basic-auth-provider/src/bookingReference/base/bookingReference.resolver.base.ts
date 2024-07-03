@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { BookingReference } from "./BookingReference";
 import { BookingReferenceCountArgs } from "./BookingReferenceCountArgs";
 import { BookingReferenceFindManyArgs } from "./BookingReferenceFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateBookingReferenceArgs } from "./UpdateBookingReferenceArgs";
 import { DeleteBookingReferenceArgs } from "./DeleteBookingReferenceArgs";
 import { Booking } from "../../booking/base/Booking";
 import { BookingReferenceService } from "../bookingReference.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => BookingReference)
 export class BookingReferenceResolverBase {
-  constructor(protected readonly service: BookingReferenceService) {}
+  constructor(
+    protected readonly service: BookingReferenceService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "read",
+    possession: "any",
+  })
   async _bookingReferencesMeta(
     @graphql.Args() args: BookingReferenceCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class BookingReferenceResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [BookingReference])
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "read",
+    possession: "any",
+  })
   async bookingReferences(
     @graphql.Args() args: BookingReferenceFindManyArgs
   ): Promise<BookingReference[]> {
     return this.service.bookingReferences(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => BookingReference, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "read",
+    possession: "own",
+  })
   async bookingReference(
     @graphql.Args() args: BookingReferenceFindUniqueArgs
   ): Promise<BookingReference | null> {
@@ -53,7 +81,13 @@ export class BookingReferenceResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => BookingReference)
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "create",
+    possession: "any",
+  })
   async createBookingReference(
     @graphql.Args() args: CreateBookingReferenceArgs
   ): Promise<BookingReference> {
@@ -71,7 +105,13 @@ export class BookingReferenceResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => BookingReference)
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "update",
+    possession: "any",
+  })
   async updateBookingReference(
     @graphql.Args() args: UpdateBookingReferenceArgs
   ): Promise<BookingReference | null> {
@@ -99,6 +139,11 @@ export class BookingReferenceResolverBase {
   }
 
   @graphql.Mutation(() => BookingReference)
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "delete",
+    possession: "any",
+  })
   async deleteBookingReference(
     @graphql.Args() args: DeleteBookingReferenceArgs
   ): Promise<BookingReference | null> {
@@ -114,9 +159,15 @@ export class BookingReferenceResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Booking, {
     nullable: true,
     name: "booking",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
   })
   async getBooking(
     @graphql.Parent() parent: BookingReference

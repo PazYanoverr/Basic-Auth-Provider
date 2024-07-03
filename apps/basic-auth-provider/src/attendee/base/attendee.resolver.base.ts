@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Attendee } from "./Attendee";
 import { AttendeeCountArgs } from "./AttendeeCountArgs";
 import { AttendeeFindManyArgs } from "./AttendeeFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateAttendeeArgs } from "./UpdateAttendeeArgs";
 import { DeleteAttendeeArgs } from "./DeleteAttendeeArgs";
 import { Booking } from "../../booking/base/Booking";
 import { AttendeeService } from "../attendee.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Attendee)
 export class AttendeeResolverBase {
-  constructor(protected readonly service: AttendeeService) {}
+  constructor(
+    protected readonly service: AttendeeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "read",
+    possession: "any",
+  })
   async _attendeesMeta(
     @graphql.Args() args: AttendeeCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class AttendeeResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Attendee])
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "read",
+    possession: "any",
+  })
   async attendees(
     @graphql.Args() args: AttendeeFindManyArgs
   ): Promise<Attendee[]> {
     return this.service.attendees(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Attendee, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "read",
+    possession: "own",
+  })
   async attendee(
     @graphql.Args() args: AttendeeFindUniqueArgs
   ): Promise<Attendee | null> {
@@ -53,7 +81,13 @@ export class AttendeeResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Attendee)
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "create",
+    possession: "any",
+  })
   async createAttendee(
     @graphql.Args() args: CreateAttendeeArgs
   ): Promise<Attendee> {
@@ -71,7 +105,13 @@ export class AttendeeResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Attendee)
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "update",
+    possession: "any",
+  })
   async updateAttendee(
     @graphql.Args() args: UpdateAttendeeArgs
   ): Promise<Attendee | null> {
@@ -99,6 +139,11 @@ export class AttendeeResolverBase {
   }
 
   @graphql.Mutation(() => Attendee)
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "delete",
+    possession: "any",
+  })
   async deleteAttendee(
     @graphql.Args() args: DeleteAttendeeArgs
   ): Promise<Attendee | null> {
@@ -114,9 +159,15 @@ export class AttendeeResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Booking, {
     nullable: true,
     name: "booking",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
   })
   async getBooking(
     @graphql.Parent() parent: Attendee

@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { AppModel } from "./AppModel";
 import { AppModelCountArgs } from "./AppModelCountArgs";
 import { AppModelFindManyArgs } from "./AppModelFindManyArgs";
@@ -27,10 +33,20 @@ import { Credential } from "../../credential/base/Credential";
 import { WebhookFindManyArgs } from "../../webhook/base/WebhookFindManyArgs";
 import { Webhook } from "../../webhook/base/Webhook";
 import { AppModelService } from "../appModel.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => AppModel)
 export class AppModelResolverBase {
-  constructor(protected readonly service: AppModelService) {}
+  constructor(
+    protected readonly service: AppModelService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "read",
+    possession: "any",
+  })
   async _appModelsMeta(
     @graphql.Args() args: AppModelCountArgs
   ): Promise<MetaQueryPayload> {
@@ -40,14 +56,26 @@ export class AppModelResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [AppModel])
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "read",
+    possession: "any",
+  })
   async appModels(
     @graphql.Args() args: AppModelFindManyArgs
   ): Promise<AppModel[]> {
     return this.service.appModels(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => AppModel, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "read",
+    possession: "own",
+  })
   async appModel(
     @graphql.Args() args: AppModelFindUniqueArgs
   ): Promise<AppModel | null> {
@@ -58,7 +86,13 @@ export class AppModelResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => AppModel)
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "create",
+    possession: "any",
+  })
   async createAppModel(
     @graphql.Args() args: CreateAppModelArgs
   ): Promise<AppModel> {
@@ -68,7 +102,13 @@ export class AppModelResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => AppModel)
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async updateAppModel(
     @graphql.Args() args: UpdateAppModelArgs
   ): Promise<AppModel | null> {
@@ -88,6 +128,11 @@ export class AppModelResolverBase {
   }
 
   @graphql.Mutation(() => AppModel)
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "delete",
+    possession: "any",
+  })
   async deleteAppModel(
     @graphql.Args() args: DeleteAppModelArgs
   ): Promise<AppModel | null> {
@@ -103,7 +148,13 @@ export class AppModelResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [ApiKey], { name: "apiKey" })
+  @nestAccessControl.UseRoles({
+    resource: "ApiKey",
+    action: "read",
+    possession: "any",
+  })
   async findApiKey(
     @graphql.Parent() parent: AppModel,
     @graphql.Args() args: ApiKeyFindManyArgs
@@ -117,7 +168,13 @@ export class AppModelResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Credential], { name: "credentials" })
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "any",
+  })
   async findCredentials(
     @graphql.Parent() parent: AppModel,
     @graphql.Args() args: CredentialFindManyArgs
@@ -131,7 +188,13 @@ export class AppModelResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Webhook], { name: "webhook" })
+  @nestAccessControl.UseRoles({
+    resource: "Webhook",
+    action: "read",
+    possession: "any",
+  })
   async findWebhook(
     @graphql.Parent() parent: AppModel,
     @graphql.Args() args: WebhookFindManyArgs

@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { SelectedCalendarService } from "../selectedCalendar.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { SelectedCalendarCreateInput } from "./SelectedCalendarCreateInput";
 import { SelectedCalendar } from "./SelectedCalendar";
 import { SelectedCalendarFindManyArgs } from "./SelectedCalendarFindManyArgs";
 import { SelectedCalendarWhereUniqueInput } from "./SelectedCalendarWhereUniqueInput";
 import { SelectedCalendarUpdateInput } from "./SelectedCalendarUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class SelectedCalendarControllerBase {
-  constructor(protected readonly service: SelectedCalendarService) {}
+  constructor(
+    protected readonly service: SelectedCalendarService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: SelectedCalendar })
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createSelectedCalendar(
     @common.Body() data: SelectedCalendarCreateInput
   ): Promise<SelectedCalendar> {
@@ -52,9 +70,18 @@ export class SelectedCalendarControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [SelectedCalendar] })
   @ApiNestedQuery(SelectedCalendarFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async selectedCalendars(
     @common.Req() request: Request
   ): Promise<SelectedCalendar[]> {
@@ -75,9 +102,18 @@ export class SelectedCalendarControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: SelectedCalendar })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async selectedCalendar(
     @common.Param() params: SelectedCalendarWhereUniqueInput
   ): Promise<SelectedCalendar | null> {
@@ -103,9 +139,18 @@ export class SelectedCalendarControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: SelectedCalendar })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateSelectedCalendar(
     @common.Param() params: SelectedCalendarWhereUniqueInput,
     @common.Body() data: SelectedCalendarUpdateInput
@@ -145,6 +190,14 @@ export class SelectedCalendarControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: SelectedCalendar })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteSelectedCalendar(
     @common.Param() params: SelectedCalendarWhereUniqueInput
   ): Promise<SelectedCalendar | null> {

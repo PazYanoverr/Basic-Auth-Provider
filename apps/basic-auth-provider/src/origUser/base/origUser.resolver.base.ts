@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { OrigUser } from "./OrigUser";
 import { OrigUserCountArgs } from "./OrigUserCountArgs";
 import { OrigUserFindManyArgs } from "./OrigUserFindManyArgs";
@@ -50,10 +56,20 @@ import { WorkflowFindManyArgs } from "../../workflow/base/WorkflowFindManyArgs";
 import { Workflow } from "../../workflow/base/Workflow";
 import { DestinationCalendar } from "../../destinationCalendar/base/DestinationCalendar";
 import { OrigUserService } from "../origUser.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => OrigUser)
 export class OrigUserResolverBase {
-  constructor(protected readonly service: OrigUserService) {}
+  constructor(
+    protected readonly service: OrigUserService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
+  })
   async _origUsersMeta(
     @graphql.Args() args: OrigUserCountArgs
   ): Promise<MetaQueryPayload> {
@@ -63,14 +79,26 @@ export class OrigUserResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [OrigUser])
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
+  })
   async origUsers(
     @graphql.Args() args: OrigUserFindManyArgs
   ): Promise<OrigUser[]> {
     return this.service.origUsers(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => OrigUser, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "own",
+  })
   async origUser(
     @graphql.Args() args: OrigUserFindUniqueArgs
   ): Promise<OrigUser | null> {
@@ -81,7 +109,13 @@ export class OrigUserResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => OrigUser)
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "create",
+    possession: "any",
+  })
   async createOrigUser(
     @graphql.Args() args: CreateOrigUserArgs
   ): Promise<OrigUser> {
@@ -99,7 +133,13 @@ export class OrigUserResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => OrigUser)
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateOrigUser(
     @graphql.Args() args: UpdateOrigUserArgs
   ): Promise<OrigUser | null> {
@@ -127,6 +167,11 @@ export class OrigUserResolverBase {
   }
 
   @graphql.Mutation(() => OrigUser)
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "delete",
+    possession: "any",
+  })
   async deleteOrigUser(
     @graphql.Args() args: DeleteOrigUserArgs
   ): Promise<OrigUser | null> {
@@ -142,7 +187,13 @@ export class OrigUserResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Account], { name: "accounts" })
+  @nestAccessControl.UseRoles({
+    resource: "Account",
+    action: "read",
+    possession: "any",
+  })
   async findAccounts(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: AccountFindManyArgs
@@ -156,7 +207,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [ApiKey], { name: "apiKeys" })
+  @nestAccessControl.UseRoles({
+    resource: "ApiKey",
+    action: "read",
+    possession: "any",
+  })
   async findApiKeys(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: ApiKeyFindManyArgs
@@ -170,7 +227,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Availability], { name: "availability" })
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "read",
+    possession: "any",
+  })
   async findAvailability(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: AvailabilityFindManyArgs
@@ -184,7 +247,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Booking], { name: "bookings" })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
+  })
   async findBookings(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: BookingFindManyArgs
@@ -198,7 +267,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Credential], { name: "credentials" })
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "any",
+  })
   async findCredentials(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: CredentialFindManyArgs
@@ -212,7 +287,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [EventType], { name: "eventTypes" })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
+  })
   async findEventTypes(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: EventTypeFindManyArgs
@@ -226,7 +307,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Feedback], { name: "feedback" })
+  @nestAccessControl.UseRoles({
+    resource: "Feedback",
+    action: "read",
+    possession: "any",
+  })
   async findFeedback(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: FeedbackFindManyArgs
@@ -240,7 +327,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Impersonation], { name: "impersonatedBy" })
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "read",
+    possession: "any",
+  })
   async findImpersonatedBy(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: ImpersonationFindManyArgs
@@ -254,7 +347,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Impersonation], { name: "impersonatedUsers" })
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "read",
+    possession: "any",
+  })
   async findImpersonatedUsers(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: ImpersonationFindManyArgs
@@ -268,7 +367,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Schedule], { name: "schedules" })
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "read",
+    possession: "any",
+  })
   async findSchedules(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: ScheduleFindManyArgs
@@ -282,7 +387,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [SelectedCalendar], { name: "selectedCalendars" })
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "read",
+    possession: "any",
+  })
   async findSelectedCalendars(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: SelectedCalendarFindManyArgs
@@ -296,7 +407,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Session], { name: "sessions" })
+  @nestAccessControl.UseRoles({
+    resource: "Session",
+    action: "read",
+    possession: "any",
+  })
   async findSessions(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: SessionFindManyArgs
@@ -310,7 +427,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Membership], { name: "teams" })
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "read",
+    possession: "any",
+  })
   async findTeams(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: MembershipFindManyArgs
@@ -324,7 +447,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Webhook], { name: "webhooks" })
+  @nestAccessControl.UseRoles({
+    resource: "Webhook",
+    action: "read",
+    possession: "any",
+  })
   async findWebhooks(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: WebhookFindManyArgs
@@ -338,7 +467,13 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Workflow], { name: "workflows" })
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "read",
+    possession: "any",
+  })
   async findWorkflows(
     @graphql.Parent() parent: OrigUser,
     @graphql.Args() args: WorkflowFindManyArgs
@@ -352,9 +487,15 @@ export class OrigUserResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => DestinationCalendar, {
     nullable: true,
     name: "destinationCalendar",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "read",
+    possession: "any",
   })
   async getDestinationCalendar(
     @graphql.Parent() parent: OrigUser

@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Account } from "./Account";
 import { AccountCountArgs } from "./AccountCountArgs";
 import { AccountFindManyArgs } from "./AccountFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateAccountArgs } from "./UpdateAccountArgs";
 import { DeleteAccountArgs } from "./DeleteAccountArgs";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { AccountService } from "../account.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Account)
 export class AccountResolverBase {
-  constructor(protected readonly service: AccountService) {}
+  constructor(
+    protected readonly service: AccountService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Account",
+    action: "read",
+    possession: "any",
+  })
   async _accountsMeta(
     @graphql.Args() args: AccountCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class AccountResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Account])
+  @nestAccessControl.UseRoles({
+    resource: "Account",
+    action: "read",
+    possession: "any",
+  })
   async accounts(
     @graphql.Args() args: AccountFindManyArgs
   ): Promise<Account[]> {
     return this.service.accounts(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Account, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Account",
+    action: "read",
+    possession: "own",
+  })
   async account(
     @graphql.Args() args: AccountFindUniqueArgs
   ): Promise<Account | null> {
@@ -53,7 +81,13 @@ export class AccountResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Account)
+  @nestAccessControl.UseRoles({
+    resource: "Account",
+    action: "create",
+    possession: "any",
+  })
   async createAccount(
     @graphql.Args() args: CreateAccountArgs
   ): Promise<Account> {
@@ -71,7 +105,13 @@ export class AccountResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Account)
+  @nestAccessControl.UseRoles({
+    resource: "Account",
+    action: "update",
+    possession: "any",
+  })
   async updateAccount(
     @graphql.Args() args: UpdateAccountArgs
   ): Promise<Account | null> {
@@ -99,6 +139,11 @@ export class AccountResolverBase {
   }
 
   @graphql.Mutation(() => Account)
+  @nestAccessControl.UseRoles({
+    resource: "Account",
+    action: "delete",
+    possession: "any",
+  })
   async deleteAccount(
     @graphql.Args() args: DeleteAccountArgs
   ): Promise<Account | null> {
@@ -114,9 +159,15 @@ export class AccountResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(@graphql.Parent() parent: Account): Promise<OrigUser | null> {
     const result = await this.service.getUser(parent.id);

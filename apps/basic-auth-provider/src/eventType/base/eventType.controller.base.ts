@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { EventTypeService } from "../eventType.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { EventTypeCreateInput } from "./EventTypeCreateInput";
 import { EventType } from "./EventType";
 import { EventTypeFindManyArgs } from "./EventTypeFindManyArgs";
@@ -41,10 +45,24 @@ import { WorkflowsOnEventTypeFindManyArgs } from "../../workflowsOnEventType/bas
 import { WorkflowsOnEventType } from "../../workflowsOnEventType/base/WorkflowsOnEventType";
 import { WorkflowsOnEventTypeWhereUniqueInput } from "../../workflowsOnEventType/base/WorkflowsOnEventTypeWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class EventTypeControllerBase {
-  constructor(protected readonly service: EventTypeService) {}
+  constructor(
+    protected readonly service: EventTypeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: EventType })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createEventType(
     @common.Body() data: EventTypeCreateInput
   ): Promise<EventType> {
@@ -139,9 +157,18 @@ export class EventTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [EventType] })
   @ApiNestedQuery(EventTypeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async eventTypes(@common.Req() request: Request): Promise<EventType[]> {
     const args = plainToClass(EventTypeFindManyArgs, request.query);
     return this.service.eventTypes({
@@ -209,9 +236,18 @@ export class EventTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: EventType })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async eventType(
     @common.Param() params: EventTypeWhereUniqueInput
   ): Promise<EventType | null> {
@@ -286,9 +322,18 @@ export class EventTypeControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: EventType })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateEventType(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() data: EventTypeUpdateInput
@@ -397,6 +442,14 @@ export class EventTypeControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: EventType })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteEventType(
     @common.Param() params: EventTypeWhereUniqueInput
   ): Promise<EventType | null> {
@@ -474,8 +527,14 @@ export class EventTypeControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/availability")
   @ApiNestedQuery(AvailabilityFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "read",
+    possession: "any",
+  })
   async findAvailability(
     @common.Req() request: Request,
     @common.Param() params: EventTypeWhereUniqueInput
@@ -520,6 +579,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Post("/:id/availability")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async connectAvailability(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: AvailabilityWhereUniqueInput[]
@@ -537,6 +601,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Patch("/:id/availability")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async updateAvailability(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: AvailabilityWhereUniqueInput[]
@@ -554,6 +623,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Delete("/:id/availability")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async disconnectAvailability(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: AvailabilityWhereUniqueInput[]
@@ -570,8 +644,14 @@ export class EventTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/bookings")
   @ApiNestedQuery(BookingFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
+  })
   async findBookings(
     @common.Req() request: Request,
     @common.Param() params: EventTypeWhereUniqueInput
@@ -638,6 +718,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Post("/:id/bookings")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async connectBookings(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: BookingWhereUniqueInput[]
@@ -655,6 +740,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Patch("/:id/bookings")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async updateBookings(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: BookingWhereUniqueInput[]
@@ -672,6 +762,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Delete("/:id/bookings")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async disconnectBookings(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: BookingWhereUniqueInput[]
@@ -688,8 +783,14 @@ export class EventTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/customInputs")
   @ApiNestedQuery(EventTypeCustomInputFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "read",
+    possession: "any",
+  })
   async findCustomInputs(
     @common.Req() request: Request,
     @common.Param() params: EventTypeWhereUniqueInput
@@ -720,6 +821,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Post("/:id/customInputs")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async connectCustomInputs(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: EventTypeCustomInputWhereUniqueInput[]
@@ -737,6 +843,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Patch("/:id/customInputs")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async updateCustomInputs(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: EventTypeCustomInputWhereUniqueInput[]
@@ -754,6 +865,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Delete("/:id/customInputs")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async disconnectCustomInputs(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: EventTypeCustomInputWhereUniqueInput[]
@@ -770,8 +886,14 @@ export class EventTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/users")
   @ApiNestedQuery(OrigUserFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
+  })
   async findUsers(
     @common.Req() request: Request,
     @common.Param() params: EventTypeWhereUniqueInput
@@ -833,6 +955,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Post("/:id/users")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async connectUsers(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: OrigUserWhereUniqueInput[]
@@ -850,6 +977,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Patch("/:id/users")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async updateUsers(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: OrigUserWhereUniqueInput[]
@@ -867,6 +999,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Delete("/:id/users")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async disconnectUsers(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: OrigUserWhereUniqueInput[]
@@ -883,8 +1020,14 @@ export class EventTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/webhooks")
   @ApiNestedQuery(WebhookFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Webhook",
+    action: "read",
+    possession: "any",
+  })
   async findWebhooks(
     @common.Req() request: Request,
     @common.Param() params: EventTypeWhereUniqueInput
@@ -931,6 +1074,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Post("/:id/webhooks")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async connectWebhooks(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: WebhookWhereUniqueInput[]
@@ -948,6 +1096,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Patch("/:id/webhooks")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async updateWebhooks(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: WebhookWhereUniqueInput[]
@@ -965,6 +1118,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Delete("/:id/webhooks")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async disconnectWebhooks(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: WebhookWhereUniqueInput[]
@@ -981,8 +1139,14 @@ export class EventTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/workflows")
   @ApiNestedQuery(WorkflowsOnEventTypeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "read",
+    possession: "any",
+  })
   async findWorkflows(
     @common.Req() request: Request,
     @common.Param() params: EventTypeWhereUniqueInput
@@ -1015,6 +1179,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Post("/:id/workflows")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async connectWorkflows(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: WorkflowsOnEventTypeWhereUniqueInput[]
@@ -1032,6 +1201,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Patch("/:id/workflows")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async updateWorkflows(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: WorkflowsOnEventTypeWhereUniqueInput[]
@@ -1049,6 +1223,11 @@ export class EventTypeControllerBase {
   }
 
   @common.Delete("/:id/workflows")
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async disconnectWorkflows(
     @common.Param() params: EventTypeWhereUniqueInput,
     @common.Body() body: WorkflowsOnEventTypeWhereUniqueInput[]

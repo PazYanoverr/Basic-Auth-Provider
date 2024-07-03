@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Membership } from "./Membership";
 import { MembershipCountArgs } from "./MembershipCountArgs";
 import { MembershipFindManyArgs } from "./MembershipFindManyArgs";
@@ -23,10 +29,20 @@ import { DeleteMembershipArgs } from "./DeleteMembershipArgs";
 import { Team } from "../../team/base/Team";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { MembershipService } from "../membership.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Membership)
 export class MembershipResolverBase {
-  constructor(protected readonly service: MembershipService) {}
+  constructor(
+    protected readonly service: MembershipService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "read",
+    possession: "any",
+  })
   async _membershipsMeta(
     @graphql.Args() args: MembershipCountArgs
   ): Promise<MetaQueryPayload> {
@@ -36,14 +52,26 @@ export class MembershipResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Membership])
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "read",
+    possession: "any",
+  })
   async memberships(
     @graphql.Args() args: MembershipFindManyArgs
   ): Promise<Membership[]> {
     return this.service.memberships(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Membership, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "read",
+    possession: "own",
+  })
   async membership(
     @graphql.Args() args: MembershipFindUniqueArgs
   ): Promise<Membership | null> {
@@ -54,7 +82,13 @@ export class MembershipResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Membership)
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "create",
+    possession: "any",
+  })
   async createMembership(
     @graphql.Args() args: CreateMembershipArgs
   ): Promise<Membership> {
@@ -74,7 +108,13 @@ export class MembershipResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Membership)
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "update",
+    possession: "any",
+  })
   async updateMembership(
     @graphql.Args() args: UpdateMembershipArgs
   ): Promise<Membership | null> {
@@ -104,6 +144,11 @@ export class MembershipResolverBase {
   }
 
   @graphql.Mutation(() => Membership)
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "delete",
+    possession: "any",
+  })
   async deleteMembership(
     @graphql.Args() args: DeleteMembershipArgs
   ): Promise<Membership | null> {
@@ -119,9 +164,15 @@ export class MembershipResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Team, {
     nullable: true,
     name: "team",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "read",
+    possession: "any",
   })
   async getTeam(@graphql.Parent() parent: Membership): Promise<Team | null> {
     const result = await this.service.getTeam(parent.id);
@@ -132,9 +183,15 @@ export class MembershipResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(
     @graphql.Parent() parent: Membership

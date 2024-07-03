@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { HashedLinkService } from "../hashedLink.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { HashedLinkCreateInput } from "./HashedLinkCreateInput";
 import { HashedLink } from "./HashedLink";
 import { HashedLinkFindManyArgs } from "./HashedLinkFindManyArgs";
 import { HashedLinkWhereUniqueInput } from "./HashedLinkWhereUniqueInput";
 import { HashedLinkUpdateInput } from "./HashedLinkUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class HashedLinkControllerBase {
-  constructor(protected readonly service: HashedLinkService) {}
+  constructor(
+    protected readonly service: HashedLinkService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: HashedLink })
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createHashedLink(
     @common.Body() data: HashedLinkCreateInput
   ): Promise<HashedLink> {
@@ -51,9 +69,18 @@ export class HashedLinkControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [HashedLink] })
   @ApiNestedQuery(HashedLinkFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async hashedLinks(@common.Req() request: Request): Promise<HashedLink[]> {
     const args = plainToClass(HashedLinkFindManyArgs, request.query);
     return this.service.hashedLinks({
@@ -71,9 +98,18 @@ export class HashedLinkControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: HashedLink })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async hashedLink(
     @common.Param() params: HashedLinkWhereUniqueInput
   ): Promise<HashedLink | null> {
@@ -98,9 +134,18 @@ export class HashedLinkControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: HashedLink })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateHashedLink(
     @common.Param() params: HashedLinkWhereUniqueInput,
     @common.Body() data: HashedLinkUpdateInput
@@ -139,6 +184,14 @@ export class HashedLinkControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: HashedLink })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteHashedLink(
     @common.Param() params: HashedLinkWhereUniqueInput
   ): Promise<HashedLink | null> {

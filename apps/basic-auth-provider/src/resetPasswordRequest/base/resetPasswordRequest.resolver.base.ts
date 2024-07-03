@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { ResetPasswordRequest } from "./ResetPasswordRequest";
 import { ResetPasswordRequestCountArgs } from "./ResetPasswordRequestCountArgs";
 import { ResetPasswordRequestFindManyArgs } from "./ResetPasswordRequestFindManyArgs";
@@ -21,10 +27,20 @@ import { CreateResetPasswordRequestArgs } from "./CreateResetPasswordRequestArgs
 import { UpdateResetPasswordRequestArgs } from "./UpdateResetPasswordRequestArgs";
 import { DeleteResetPasswordRequestArgs } from "./DeleteResetPasswordRequestArgs";
 import { ResetPasswordRequestService } from "../resetPasswordRequest.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => ResetPasswordRequest)
 export class ResetPasswordRequestResolverBase {
-  constructor(protected readonly service: ResetPasswordRequestService) {}
+  constructor(
+    protected readonly service: ResetPasswordRequestService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "read",
+    possession: "any",
+  })
   async _resetPasswordRequestsMeta(
     @graphql.Args() args: ResetPasswordRequestCountArgs
   ): Promise<MetaQueryPayload> {
@@ -34,14 +50,26 @@ export class ResetPasswordRequestResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [ResetPasswordRequest])
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "read",
+    possession: "any",
+  })
   async resetPasswordRequests(
     @graphql.Args() args: ResetPasswordRequestFindManyArgs
   ): Promise<ResetPasswordRequest[]> {
     return this.service.resetPasswordRequests(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => ResetPasswordRequest, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "read",
+    possession: "own",
+  })
   async resetPasswordRequest(
     @graphql.Args() args: ResetPasswordRequestFindUniqueArgs
   ): Promise<ResetPasswordRequest | null> {
@@ -52,7 +80,13 @@ export class ResetPasswordRequestResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => ResetPasswordRequest)
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "create",
+    possession: "any",
+  })
   async createResetPasswordRequest(
     @graphql.Args() args: CreateResetPasswordRequestArgs
   ): Promise<ResetPasswordRequest> {
@@ -62,7 +96,13 @@ export class ResetPasswordRequestResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => ResetPasswordRequest)
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "update",
+    possession: "any",
+  })
   async updateResetPasswordRequest(
     @graphql.Args() args: UpdateResetPasswordRequestArgs
   ): Promise<ResetPasswordRequest | null> {
@@ -82,6 +122,11 @@ export class ResetPasswordRequestResolverBase {
   }
 
   @graphql.Mutation(() => ResetPasswordRequest)
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "delete",
+    possession: "any",
+  })
   async deleteResetPasswordRequest(
     @graphql.Args() args: DeleteResetPasswordRequestArgs
   ): Promise<ResetPasswordRequest | null> {

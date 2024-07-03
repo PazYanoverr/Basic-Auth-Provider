@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Session } from "./Session";
 import { SessionCountArgs } from "./SessionCountArgs";
 import { SessionFindManyArgs } from "./SessionFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateSessionArgs } from "./UpdateSessionArgs";
 import { DeleteSessionArgs } from "./DeleteSessionArgs";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { SessionService } from "../session.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Session)
 export class SessionResolverBase {
-  constructor(protected readonly service: SessionService) {}
+  constructor(
+    protected readonly service: SessionService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Session",
+    action: "read",
+    possession: "any",
+  })
   async _sessionsMeta(
     @graphql.Args() args: SessionCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class SessionResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Session])
+  @nestAccessControl.UseRoles({
+    resource: "Session",
+    action: "read",
+    possession: "any",
+  })
   async sessions(
     @graphql.Args() args: SessionFindManyArgs
   ): Promise<Session[]> {
     return this.service.sessions(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Session, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Session",
+    action: "read",
+    possession: "own",
+  })
   async session(
     @graphql.Args() args: SessionFindUniqueArgs
   ): Promise<Session | null> {
@@ -53,7 +81,13 @@ export class SessionResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Session)
+  @nestAccessControl.UseRoles({
+    resource: "Session",
+    action: "create",
+    possession: "any",
+  })
   async createSession(
     @graphql.Args() args: CreateSessionArgs
   ): Promise<Session> {
@@ -71,7 +105,13 @@ export class SessionResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Session)
+  @nestAccessControl.UseRoles({
+    resource: "Session",
+    action: "update",
+    possession: "any",
+  })
   async updateSession(
     @graphql.Args() args: UpdateSessionArgs
   ): Promise<Session | null> {
@@ -99,6 +139,11 @@ export class SessionResolverBase {
   }
 
   @graphql.Mutation(() => Session)
+  @nestAccessControl.UseRoles({
+    resource: "Session",
+    action: "delete",
+    possession: "any",
+  })
   async deleteSession(
     @graphql.Args() args: DeleteSessionArgs
   ): Promise<Session | null> {
@@ -114,9 +159,15 @@ export class SessionResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(@graphql.Parent() parent: Session): Promise<OrigUser | null> {
     const result = await this.service.getUser(parent.id);

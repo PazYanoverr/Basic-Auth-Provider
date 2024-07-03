@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { AttendeeService } from "../attendee.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { AttendeeCreateInput } from "./AttendeeCreateInput";
 import { Attendee } from "./Attendee";
 import { AttendeeFindManyArgs } from "./AttendeeFindManyArgs";
 import { AttendeeWhereUniqueInput } from "./AttendeeWhereUniqueInput";
 import { AttendeeUpdateInput } from "./AttendeeUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class AttendeeControllerBase {
-  constructor(protected readonly service: AttendeeService) {}
+  constructor(
+    protected readonly service: AttendeeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Attendee })
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createAttendee(
     @common.Body() data: AttendeeCreateInput
   ): Promise<Attendee> {
@@ -56,9 +74,18 @@ export class AttendeeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Attendee] })
   @ApiNestedQuery(AttendeeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async attendees(@common.Req() request: Request): Promise<Attendee[]> {
     const args = plainToClass(AttendeeFindManyArgs, request.query);
     return this.service.attendees({
@@ -79,9 +106,18 @@ export class AttendeeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Attendee })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async attendee(
     @common.Param() params: AttendeeWhereUniqueInput
   ): Promise<Attendee | null> {
@@ -109,9 +145,18 @@ export class AttendeeControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Attendee })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateAttendee(
     @common.Param() params: AttendeeWhereUniqueInput,
     @common.Body() data: AttendeeUpdateInput
@@ -155,6 +200,14 @@ export class AttendeeControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Attendee })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteAttendee(
     @common.Param() params: AttendeeWhereUniqueInput
   ): Promise<Attendee | null> {
