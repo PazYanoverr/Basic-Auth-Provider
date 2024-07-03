@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { TeamService } from "../team.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { TeamCreateInput } from "./TeamCreateInput";
 import { Team } from "./Team";
 import { TeamFindManyArgs } from "./TeamFindManyArgs";
@@ -29,10 +33,24 @@ import { MembershipFindManyArgs } from "../../membership/base/MembershipFindMany
 import { Membership } from "../../membership/base/Membership";
 import { MembershipWhereUniqueInput } from "../../membership/base/MembershipWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class TeamControllerBase {
-  constructor(protected readonly service: TeamService) {}
+  constructor(
+    protected readonly service: TeamService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Team })
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createTeam(@common.Body() data: TeamCreateInput): Promise<Team> {
     return await this.service.createTeam({
       data: data,
@@ -47,9 +65,18 @@ export class TeamControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Team] })
   @ApiNestedQuery(TeamFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async teams(@common.Req() request: Request): Promise<Team[]> {
     const args = plainToClass(TeamFindManyArgs, request.query);
     return this.service.teams({
@@ -65,9 +92,18 @@ export class TeamControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Team })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async team(
     @common.Param() params: TeamWhereUniqueInput
   ): Promise<Team | null> {
@@ -90,9 +126,18 @@ export class TeamControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Team })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateTeam(
     @common.Param() params: TeamWhereUniqueInput,
     @common.Body() data: TeamUpdateInput
@@ -123,6 +168,14 @@ export class TeamControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Team })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteTeam(
     @common.Param() params: TeamWhereUniqueInput
   ): Promise<Team | null> {
@@ -148,8 +201,14 @@ export class TeamControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/eventTypes")
   @ApiNestedQuery(EventTypeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
+  })
   async findEventTypes(
     @common.Req() request: Request,
     @common.Param() params: TeamWhereUniqueInput
@@ -227,6 +286,11 @@ export class TeamControllerBase {
   }
 
   @common.Post("/:id/eventTypes")
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "update",
+    possession: "any",
+  })
   async connectEventTypes(
     @common.Param() params: TeamWhereUniqueInput,
     @common.Body() body: EventTypeWhereUniqueInput[]
@@ -244,6 +308,11 @@ export class TeamControllerBase {
   }
 
   @common.Patch("/:id/eventTypes")
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "update",
+    possession: "any",
+  })
   async updateEventTypes(
     @common.Param() params: TeamWhereUniqueInput,
     @common.Body() body: EventTypeWhereUniqueInput[]
@@ -261,6 +330,11 @@ export class TeamControllerBase {
   }
 
   @common.Delete("/:id/eventTypes")
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "update",
+    possession: "any",
+  })
   async disconnectEventTypes(
     @common.Param() params: TeamWhereUniqueInput,
     @common.Body() body: EventTypeWhereUniqueInput[]
@@ -277,8 +351,14 @@ export class TeamControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/members")
   @ApiNestedQuery(MembershipFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "read",
+    possession: "any",
+  })
   async findMembers(
     @common.Req() request: Request,
     @common.Param() params: TeamWhereUniqueInput
@@ -313,6 +393,11 @@ export class TeamControllerBase {
   }
 
   @common.Post("/:id/members")
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "update",
+    possession: "any",
+  })
   async connectMembers(
     @common.Param() params: TeamWhereUniqueInput,
     @common.Body() body: MembershipWhereUniqueInput[]
@@ -330,6 +415,11 @@ export class TeamControllerBase {
   }
 
   @common.Patch("/:id/members")
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "update",
+    possession: "any",
+  })
   async updateMembers(
     @common.Param() params: TeamWhereUniqueInput,
     @common.Body() body: MembershipWhereUniqueInput[]
@@ -347,6 +437,11 @@ export class TeamControllerBase {
   }
 
   @common.Delete("/:id/members")
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "update",
+    possession: "any",
+  })
   async disconnectMembers(
     @common.Param() params: TeamWhereUniqueInput,
     @common.Body() body: MembershipWhereUniqueInput[]

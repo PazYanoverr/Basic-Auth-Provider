@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ApiKeyService } from "../apiKey.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ApiKeyCreateInput } from "./ApiKeyCreateInput";
 import { ApiKey } from "./ApiKey";
 import { ApiKeyFindManyArgs } from "./ApiKeyFindManyArgs";
 import { ApiKeyWhereUniqueInput } from "./ApiKeyWhereUniqueInput";
 import { ApiKeyUpdateInput } from "./ApiKeyUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ApiKeyControllerBase {
-  constructor(protected readonly service: ApiKeyService) {}
+  constructor(
+    protected readonly service: ApiKeyService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: ApiKey })
+  @nestAccessControl.UseRoles({
+    resource: "ApiKey",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createApiKey(@common.Body() data: ApiKeyCreateInput): Promise<ApiKey> {
     return await this.service.createApiKey({
       data: {
@@ -67,9 +85,18 @@ export class ApiKeyControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [ApiKey] })
   @ApiNestedQuery(ApiKeyFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ApiKey",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async apiKeys(@common.Req() request: Request): Promise<ApiKey[]> {
     const args = plainToClass(ApiKeyFindManyArgs, request.query);
     return this.service.apiKeys({
@@ -97,9 +124,18 @@ export class ApiKeyControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: ApiKey })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ApiKey",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async apiKey(
     @common.Param() params: ApiKeyWhereUniqueInput
   ): Promise<ApiKey | null> {
@@ -134,9 +170,18 @@ export class ApiKeyControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: ApiKey })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ApiKey",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateApiKey(
     @common.Param() params: ApiKeyWhereUniqueInput,
     @common.Body() data: ApiKeyUpdateInput
@@ -193,6 +238,14 @@ export class ApiKeyControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: ApiKey })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ApiKey",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteApiKey(
     @common.Param() params: ApiKeyWhereUniqueInput
   ): Promise<ApiKey | null> {

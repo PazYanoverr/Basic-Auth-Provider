@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { ReminderMail } from "./ReminderMail";
 import { ReminderMailCountArgs } from "./ReminderMailCountArgs";
 import { ReminderMailFindManyArgs } from "./ReminderMailFindManyArgs";
@@ -21,10 +27,20 @@ import { CreateReminderMailArgs } from "./CreateReminderMailArgs";
 import { UpdateReminderMailArgs } from "./UpdateReminderMailArgs";
 import { DeleteReminderMailArgs } from "./DeleteReminderMailArgs";
 import { ReminderMailService } from "../reminderMail.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => ReminderMail)
 export class ReminderMailResolverBase {
-  constructor(protected readonly service: ReminderMailService) {}
+  constructor(
+    protected readonly service: ReminderMailService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "read",
+    possession: "any",
+  })
   async _reminderMailsMeta(
     @graphql.Args() args: ReminderMailCountArgs
   ): Promise<MetaQueryPayload> {
@@ -34,14 +50,26 @@ export class ReminderMailResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [ReminderMail])
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "read",
+    possession: "any",
+  })
   async reminderMails(
     @graphql.Args() args: ReminderMailFindManyArgs
   ): Promise<ReminderMail[]> {
     return this.service.reminderMails(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => ReminderMail, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "read",
+    possession: "own",
+  })
   async reminderMail(
     @graphql.Args() args: ReminderMailFindUniqueArgs
   ): Promise<ReminderMail | null> {
@@ -52,7 +80,13 @@ export class ReminderMailResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => ReminderMail)
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "create",
+    possession: "any",
+  })
   async createReminderMail(
     @graphql.Args() args: CreateReminderMailArgs
   ): Promise<ReminderMail> {
@@ -62,7 +96,13 @@ export class ReminderMailResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => ReminderMail)
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "update",
+    possession: "any",
+  })
   async updateReminderMail(
     @graphql.Args() args: UpdateReminderMailArgs
   ): Promise<ReminderMail | null> {
@@ -82,6 +122,11 @@ export class ReminderMailResolverBase {
   }
 
   @graphql.Mutation(() => ReminderMail)
+  @nestAccessControl.UseRoles({
+    resource: "ReminderMail",
+    action: "delete",
+    possession: "any",
+  })
   async deleteReminderMail(
     @graphql.Args() args: DeleteReminderMailArgs
   ): Promise<ReminderMail | null> {

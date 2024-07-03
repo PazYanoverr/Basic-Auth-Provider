@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { BookingService } from "../booking.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { BookingCreateInput } from "./BookingCreateInput";
 import { Booking } from "./Booking";
 import { BookingFindManyArgs } from "./BookingFindManyArgs";
@@ -35,10 +39,24 @@ import { WorkflowReminderFindManyArgs } from "../../workflowReminder/base/Workfl
 import { WorkflowReminder } from "../../workflowReminder/base/WorkflowReminder";
 import { WorkflowReminderWhereUniqueInput } from "../../workflowReminder/base/WorkflowReminderWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class BookingControllerBase {
-  constructor(protected readonly service: BookingService) {}
+  constructor(
+    protected readonly service: BookingService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Booking })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createBooking(
     @common.Body() data: BookingCreateInput
   ): Promise<Booking> {
@@ -122,9 +140,18 @@ export class BookingControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Booking] })
   @ApiNestedQuery(BookingFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async bookings(@common.Req() request: Request): Promise<Booking[]> {
     const args = plainToClass(BookingFindManyArgs, request.query);
     return this.service.bookings({
@@ -181,9 +208,18 @@ export class BookingControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Booking })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async booking(
     @common.Param() params: BookingWhereUniqueInput
   ): Promise<Booking | null> {
@@ -247,9 +283,18 @@ export class BookingControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Booking })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateBooking(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() data: BookingUpdateInput
@@ -347,6 +392,14 @@ export class BookingControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Booking })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteBooking(
     @common.Param() params: BookingWhereUniqueInput
   ): Promise<Booking | null> {
@@ -413,8 +466,14 @@ export class BookingControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/attendees")
   @ApiNestedQuery(AttendeeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Attendee",
+    action: "read",
+    possession: "any",
+  })
   async findAttendees(
     @common.Req() request: Request,
     @common.Param() params: BookingWhereUniqueInput
@@ -445,6 +504,11 @@ export class BookingControllerBase {
   }
 
   @common.Post("/:id/attendees")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async connectAttendees(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: AttendeeWhereUniqueInput[]
@@ -462,6 +526,11 @@ export class BookingControllerBase {
   }
 
   @common.Patch("/:id/attendees")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async updateAttendees(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: AttendeeWhereUniqueInput[]
@@ -479,6 +548,11 @@ export class BookingControllerBase {
   }
 
   @common.Delete("/:id/attendees")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async disconnectAttendees(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: AttendeeWhereUniqueInput[]
@@ -495,8 +569,14 @@ export class BookingControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/payment")
   @ApiNestedQuery(PaymentFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Payment",
+    action: "read",
+    possession: "any",
+  })
   async findPayment(
     @common.Req() request: Request,
     @common.Param() params: BookingWhereUniqueInput
@@ -533,6 +613,11 @@ export class BookingControllerBase {
   }
 
   @common.Post("/:id/payment")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async connectPayment(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: PaymentWhereUniqueInput[]
@@ -550,6 +635,11 @@ export class BookingControllerBase {
   }
 
   @common.Patch("/:id/payment")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async updatePayment(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: PaymentWhereUniqueInput[]
@@ -567,6 +657,11 @@ export class BookingControllerBase {
   }
 
   @common.Delete("/:id/payment")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async disconnectPayment(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: PaymentWhereUniqueInput[]
@@ -583,8 +678,14 @@ export class BookingControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/references")
   @ApiNestedQuery(BookingReferenceFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "read",
+    possession: "any",
+  })
   async findReferences(
     @common.Req() request: Request,
     @common.Param() params: BookingWhereUniqueInput
@@ -618,6 +719,11 @@ export class BookingControllerBase {
   }
 
   @common.Post("/:id/references")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async connectReferences(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: BookingReferenceWhereUniqueInput[]
@@ -635,6 +741,11 @@ export class BookingControllerBase {
   }
 
   @common.Patch("/:id/references")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async updateReferences(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: BookingReferenceWhereUniqueInput[]
@@ -652,6 +763,11 @@ export class BookingControllerBase {
   }
 
   @common.Delete("/:id/references")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async disconnectReferences(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: BookingReferenceWhereUniqueInput[]
@@ -668,8 +784,14 @@ export class BookingControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/workflowReminders")
   @ApiNestedQuery(WorkflowReminderFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "read",
+    possession: "any",
+  })
   async findWorkflowReminders(
     @common.Req() request: Request,
     @common.Param() params: BookingWhereUniqueInput
@@ -706,6 +828,11 @@ export class BookingControllerBase {
   }
 
   @common.Post("/:id/workflowReminders")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async connectWorkflowReminders(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: WorkflowReminderWhereUniqueInput[]
@@ -723,6 +850,11 @@ export class BookingControllerBase {
   }
 
   @common.Patch("/:id/workflowReminders")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async updateWorkflowReminders(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: WorkflowReminderWhereUniqueInput[]
@@ -740,6 +872,11 @@ export class BookingControllerBase {
   }
 
   @common.Delete("/:id/workflowReminders")
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "update",
+    possession: "any",
+  })
   async disconnectWorkflowReminders(
     @common.Param() params: BookingWhereUniqueInput,
     @common.Body() body: WorkflowReminderWhereUniqueInput[]

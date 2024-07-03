@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { DailyEventReferenceService } from "../dailyEventReference.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { DailyEventReferenceCreateInput } from "./DailyEventReferenceCreateInput";
 import { DailyEventReference } from "./DailyEventReference";
 import { DailyEventReferenceFindManyArgs } from "./DailyEventReferenceFindManyArgs";
 import { DailyEventReferenceWhereUniqueInput } from "./DailyEventReferenceWhereUniqueInput";
 import { DailyEventReferenceUpdateInput } from "./DailyEventReferenceUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class DailyEventReferenceControllerBase {
-  constructor(protected readonly service: DailyEventReferenceService) {}
+  constructor(
+    protected readonly service: DailyEventReferenceService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: DailyEventReference })
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createDailyEventReference(
     @common.Body() data: DailyEventReferenceCreateInput
   ): Promise<DailyEventReference> {
@@ -54,9 +72,18 @@ export class DailyEventReferenceControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [DailyEventReference] })
   @ApiNestedQuery(DailyEventReferenceFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async dailyEventReferences(
     @common.Req() request: Request
   ): Promise<DailyEventReference[]> {
@@ -77,9 +104,18 @@ export class DailyEventReferenceControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: DailyEventReference })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async dailyEventReference(
     @common.Param() params: DailyEventReferenceWhereUniqueInput
   ): Promise<DailyEventReference | null> {
@@ -105,9 +141,18 @@ export class DailyEventReferenceControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: DailyEventReference })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateDailyEventReference(
     @common.Param() params: DailyEventReferenceWhereUniqueInput,
     @common.Body() data: DailyEventReferenceUpdateInput
@@ -149,6 +194,14 @@ export class DailyEventReferenceControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: DailyEventReference })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteDailyEventReference(
     @common.Param() params: DailyEventReferenceWhereUniqueInput
   ): Promise<DailyEventReference | null> {

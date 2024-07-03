@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Feedback } from "./Feedback";
 import { FeedbackCountArgs } from "./FeedbackCountArgs";
 import { FeedbackFindManyArgs } from "./FeedbackFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateFeedbackArgs } from "./UpdateFeedbackArgs";
 import { DeleteFeedbackArgs } from "./DeleteFeedbackArgs";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { FeedbackService } from "../feedback.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Feedback)
 export class FeedbackResolverBase {
-  constructor(protected readonly service: FeedbackService) {}
+  constructor(
+    protected readonly service: FeedbackService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Feedback",
+    action: "read",
+    possession: "any",
+  })
   async _feedbacksMeta(
     @graphql.Args() args: FeedbackCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class FeedbackResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Feedback])
+  @nestAccessControl.UseRoles({
+    resource: "Feedback",
+    action: "read",
+    possession: "any",
+  })
   async feedbacks(
     @graphql.Args() args: FeedbackFindManyArgs
   ): Promise<Feedback[]> {
     return this.service.feedbacks(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Feedback, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Feedback",
+    action: "read",
+    possession: "own",
+  })
   async feedback(
     @graphql.Args() args: FeedbackFindUniqueArgs
   ): Promise<Feedback | null> {
@@ -53,7 +81,13 @@ export class FeedbackResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Feedback)
+  @nestAccessControl.UseRoles({
+    resource: "Feedback",
+    action: "create",
+    possession: "any",
+  })
   async createFeedback(
     @graphql.Args() args: CreateFeedbackArgs
   ): Promise<Feedback> {
@@ -69,7 +103,13 @@ export class FeedbackResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Feedback)
+  @nestAccessControl.UseRoles({
+    resource: "Feedback",
+    action: "update",
+    possession: "any",
+  })
   async updateFeedback(
     @graphql.Args() args: UpdateFeedbackArgs
   ): Promise<Feedback | null> {
@@ -95,6 +135,11 @@ export class FeedbackResolverBase {
   }
 
   @graphql.Mutation(() => Feedback)
+  @nestAccessControl.UseRoles({
+    resource: "Feedback",
+    action: "delete",
+    possession: "any",
+  })
   async deleteFeedback(
     @graphql.Args() args: DeleteFeedbackArgs
   ): Promise<Feedback | null> {
@@ -110,9 +155,15 @@ export class FeedbackResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(@graphql.Parent() parent: Feedback): Promise<OrigUser | null> {
     const result = await this.service.getUser(parent.id);

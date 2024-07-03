@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Workflow } from "./Workflow";
 import { WorkflowCountArgs } from "./WorkflowCountArgs";
 import { WorkflowFindManyArgs } from "./WorkflowFindManyArgs";
@@ -26,10 +32,20 @@ import { WorkflowStepFindManyArgs } from "../../workflowStep/base/WorkflowStepFi
 import { WorkflowStep } from "../../workflowStep/base/WorkflowStep";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { WorkflowService } from "../workflow.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Workflow)
 export class WorkflowResolverBase {
-  constructor(protected readonly service: WorkflowService) {}
+  constructor(
+    protected readonly service: WorkflowService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "read",
+    possession: "any",
+  })
   async _workflowsMeta(
     @graphql.Args() args: WorkflowCountArgs
   ): Promise<MetaQueryPayload> {
@@ -39,14 +55,26 @@ export class WorkflowResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Workflow])
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "read",
+    possession: "any",
+  })
   async workflows(
     @graphql.Args() args: WorkflowFindManyArgs
   ): Promise<Workflow[]> {
     return this.service.workflows(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Workflow, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "read",
+    possession: "own",
+  })
   async workflow(
     @graphql.Args() args: WorkflowFindUniqueArgs
   ): Promise<Workflow | null> {
@@ -57,7 +85,13 @@ export class WorkflowResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Workflow)
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "create",
+    possession: "any",
+  })
   async createWorkflow(
     @graphql.Args() args: CreateWorkflowArgs
   ): Promise<Workflow> {
@@ -73,7 +107,13 @@ export class WorkflowResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Workflow)
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "update",
+    possession: "any",
+  })
   async updateWorkflow(
     @graphql.Args() args: UpdateWorkflowArgs
   ): Promise<Workflow | null> {
@@ -99,6 +139,11 @@ export class WorkflowResolverBase {
   }
 
   @graphql.Mutation(() => Workflow)
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "delete",
+    possession: "any",
+  })
   async deleteWorkflow(
     @graphql.Args() args: DeleteWorkflowArgs
   ): Promise<Workflow | null> {
@@ -114,7 +159,13 @@ export class WorkflowResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [WorkflowsOnEventType], { name: "activeOn" })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "read",
+    possession: "any",
+  })
   async findActiveOn(
     @graphql.Parent() parent: Workflow,
     @graphql.Args() args: WorkflowsOnEventTypeFindManyArgs
@@ -128,7 +179,13 @@ export class WorkflowResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [WorkflowStep], { name: "steps" })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "read",
+    possession: "any",
+  })
   async findSteps(
     @graphql.Parent() parent: Workflow,
     @graphql.Args() args: WorkflowStepFindManyArgs
@@ -142,9 +199,15 @@ export class WorkflowResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(@graphql.Parent() parent: Workflow): Promise<OrigUser | null> {
     const result = await this.service.getUser(parent.id);

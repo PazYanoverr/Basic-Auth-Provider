@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { WorkflowsOnEventType } from "./WorkflowsOnEventType";
 import { WorkflowsOnEventTypeCountArgs } from "./WorkflowsOnEventTypeCountArgs";
 import { WorkflowsOnEventTypeFindManyArgs } from "./WorkflowsOnEventTypeFindManyArgs";
@@ -23,10 +29,20 @@ import { DeleteWorkflowsOnEventTypeArgs } from "./DeleteWorkflowsOnEventTypeArgs
 import { EventType } from "../../eventType/base/EventType";
 import { Workflow } from "../../workflow/base/Workflow";
 import { WorkflowsOnEventTypeService } from "../workflowsOnEventType.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => WorkflowsOnEventType)
 export class WorkflowsOnEventTypeResolverBase {
-  constructor(protected readonly service: WorkflowsOnEventTypeService) {}
+  constructor(
+    protected readonly service: WorkflowsOnEventTypeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "read",
+    possession: "any",
+  })
   async _workflowsOnEventTypesMeta(
     @graphql.Args() args: WorkflowsOnEventTypeCountArgs
   ): Promise<MetaQueryPayload> {
@@ -36,14 +52,26 @@ export class WorkflowsOnEventTypeResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [WorkflowsOnEventType])
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "read",
+    possession: "any",
+  })
   async workflowsOnEventTypes(
     @graphql.Args() args: WorkflowsOnEventTypeFindManyArgs
   ): Promise<WorkflowsOnEventType[]> {
     return this.service.workflowsOnEventTypes(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => WorkflowsOnEventType, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "read",
+    possession: "own",
+  })
   async workflowsOnEventType(
     @graphql.Args() args: WorkflowsOnEventTypeFindUniqueArgs
   ): Promise<WorkflowsOnEventType | null> {
@@ -54,7 +82,13 @@ export class WorkflowsOnEventTypeResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => WorkflowsOnEventType)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "create",
+    possession: "any",
+  })
   async createWorkflowsOnEventType(
     @graphql.Args() args: CreateWorkflowsOnEventTypeArgs
   ): Promise<WorkflowsOnEventType> {
@@ -74,7 +108,13 @@ export class WorkflowsOnEventTypeResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => WorkflowsOnEventType)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "update",
+    possession: "any",
+  })
   async updateWorkflowsOnEventType(
     @graphql.Args() args: UpdateWorkflowsOnEventTypeArgs
   ): Promise<WorkflowsOnEventType | null> {
@@ -104,6 +144,11 @@ export class WorkflowsOnEventTypeResolverBase {
   }
 
   @graphql.Mutation(() => WorkflowsOnEventType)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "delete",
+    possession: "any",
+  })
   async deleteWorkflowsOnEventType(
     @graphql.Args() args: DeleteWorkflowsOnEventTypeArgs
   ): Promise<WorkflowsOnEventType | null> {
@@ -119,9 +164,15 @@ export class WorkflowsOnEventTypeResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => EventType, {
     nullable: true,
     name: "eventType",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
   })
   async getEventType(
     @graphql.Parent() parent: WorkflowsOnEventType
@@ -134,9 +185,15 @@ export class WorkflowsOnEventTypeResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Workflow, {
     nullable: true,
     name: "workflow",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "read",
+    possession: "any",
   })
   async getWorkflow(
     @graphql.Parent() parent: WorkflowsOnEventType

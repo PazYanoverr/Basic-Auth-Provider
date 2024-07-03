@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Impersonation } from "./Impersonation";
 import { ImpersonationCountArgs } from "./ImpersonationCountArgs";
 import { ImpersonationFindManyArgs } from "./ImpersonationFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateImpersonationArgs } from "./UpdateImpersonationArgs";
 import { DeleteImpersonationArgs } from "./DeleteImpersonationArgs";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { ImpersonationService } from "../impersonation.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Impersonation)
 export class ImpersonationResolverBase {
-  constructor(protected readonly service: ImpersonationService) {}
+  constructor(
+    protected readonly service: ImpersonationService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "read",
+    possession: "any",
+  })
   async _impersonationsMeta(
     @graphql.Args() args: ImpersonationCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class ImpersonationResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Impersonation])
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "read",
+    possession: "any",
+  })
   async impersonations(
     @graphql.Args() args: ImpersonationFindManyArgs
   ): Promise<Impersonation[]> {
     return this.service.impersonations(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Impersonation, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "read",
+    possession: "own",
+  })
   async impersonation(
     @graphql.Args() args: ImpersonationFindUniqueArgs
   ): Promise<Impersonation | null> {
@@ -53,7 +81,13 @@ export class ImpersonationResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Impersonation)
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "create",
+    possession: "any",
+  })
   async createImpersonation(
     @graphql.Args() args: CreateImpersonationArgs
   ): Promise<Impersonation> {
@@ -73,7 +107,13 @@ export class ImpersonationResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Impersonation)
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "update",
+    possession: "any",
+  })
   async updateImpersonation(
     @graphql.Args() args: UpdateImpersonationArgs
   ): Promise<Impersonation | null> {
@@ -103,6 +143,11 @@ export class ImpersonationResolverBase {
   }
 
   @graphql.Mutation(() => Impersonation)
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "delete",
+    possession: "any",
+  })
   async deleteImpersonation(
     @graphql.Args() args: DeleteImpersonationArgs
   ): Promise<Impersonation | null> {
@@ -118,9 +163,15 @@ export class ImpersonationResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "impersonatedBy",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getImpersonatedBy(
     @graphql.Parent() parent: Impersonation
@@ -133,9 +184,15 @@ export class ImpersonationResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "impersonatedUser",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getImpersonatedUser(
     @graphql.Parent() parent: Impersonation

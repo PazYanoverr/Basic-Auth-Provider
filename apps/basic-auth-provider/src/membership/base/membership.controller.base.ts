@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { MembershipService } from "../membership.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { MembershipCreateInput } from "./MembershipCreateInput";
 import { Membership } from "./Membership";
 import { MembershipFindManyArgs } from "./MembershipFindManyArgs";
 import { MembershipWhereUniqueInput } from "./MembershipWhereUniqueInput";
 import { MembershipUpdateInput } from "./MembershipUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class MembershipControllerBase {
-  constructor(protected readonly service: MembershipService) {}
+  constructor(
+    protected readonly service: MembershipService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Membership })
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createMembership(
     @common.Body() data: MembershipCreateInput
   ): Promise<Membership> {
@@ -62,9 +80,18 @@ export class MembershipControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Membership] })
   @ApiNestedQuery(MembershipFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async memberships(@common.Req() request: Request): Promise<Membership[]> {
     const args = plainToClass(MembershipFindManyArgs, request.query);
     return this.service.memberships({
@@ -89,9 +116,18 @@ export class MembershipControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Membership })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async membership(
     @common.Param() params: MembershipWhereUniqueInput
   ): Promise<Membership | null> {
@@ -123,9 +159,18 @@ export class MembershipControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Membership })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateMembership(
     @common.Param() params: MembershipWhereUniqueInput,
     @common.Body() data: MembershipUpdateInput
@@ -175,6 +220,14 @@ export class MembershipControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Membership })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteMembership(
     @common.Param() params: MembershipWhereUniqueInput
   ): Promise<Membership | null> {

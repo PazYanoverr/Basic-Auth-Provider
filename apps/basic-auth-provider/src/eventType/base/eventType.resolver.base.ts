@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { EventType } from "./EventType";
 import { EventTypeCountArgs } from "./EventTypeCountArgs";
 import { EventTypeFindManyArgs } from "./EventTypeFindManyArgs";
@@ -37,10 +43,20 @@ import { HashedLink } from "../../hashedLink/base/HashedLink";
 import { Schedule } from "../../schedule/base/Schedule";
 import { Team } from "../../team/base/Team";
 import { EventTypeService } from "../eventType.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => EventType)
 export class EventTypeResolverBase {
-  constructor(protected readonly service: EventTypeService) {}
+  constructor(
+    protected readonly service: EventTypeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
+  })
   async _eventTypesMeta(
     @graphql.Args() args: EventTypeCountArgs
   ): Promise<MetaQueryPayload> {
@@ -50,14 +66,26 @@ export class EventTypeResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [EventType])
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
+  })
   async eventTypes(
     @graphql.Args() args: EventTypeFindManyArgs
   ): Promise<EventType[]> {
     return this.service.eventTypes(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => EventType, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "own",
+  })
   async eventType(
     @graphql.Args() args: EventTypeFindUniqueArgs
   ): Promise<EventType | null> {
@@ -68,7 +96,13 @@ export class EventTypeResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => EventType)
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "create",
+    possession: "any",
+  })
   async createEventType(
     @graphql.Args() args: CreateEventTypeArgs
   ): Promise<EventType> {
@@ -104,7 +138,13 @@ export class EventTypeResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => EventType)
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "update",
+    possession: "any",
+  })
   async updateEventType(
     @graphql.Args() args: UpdateEventTypeArgs
   ): Promise<EventType | null> {
@@ -150,6 +190,11 @@ export class EventTypeResolverBase {
   }
 
   @graphql.Mutation(() => EventType)
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "delete",
+    possession: "any",
+  })
   async deleteEventType(
     @graphql.Args() args: DeleteEventTypeArgs
   ): Promise<EventType | null> {
@@ -165,7 +210,13 @@ export class EventTypeResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Availability], { name: "availability" })
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "read",
+    possession: "any",
+  })
   async findAvailability(
     @graphql.Parent() parent: EventType,
     @graphql.Args() args: AvailabilityFindManyArgs
@@ -179,7 +230,13 @@ export class EventTypeResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Booking], { name: "bookings" })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
+  })
   async findBookings(
     @graphql.Parent() parent: EventType,
     @graphql.Args() args: BookingFindManyArgs
@@ -193,7 +250,13 @@ export class EventTypeResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [EventTypeCustomInput], { name: "customInputs" })
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "read",
+    possession: "any",
+  })
   async findCustomInputs(
     @graphql.Parent() parent: EventType,
     @graphql.Args() args: EventTypeCustomInputFindManyArgs
@@ -207,7 +270,13 @@ export class EventTypeResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [OrigUser], { name: "users" })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
+  })
   async findUsers(
     @graphql.Parent() parent: EventType,
     @graphql.Args() args: OrigUserFindManyArgs
@@ -221,7 +290,13 @@ export class EventTypeResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Webhook], { name: "webhooks" })
+  @nestAccessControl.UseRoles({
+    resource: "Webhook",
+    action: "read",
+    possession: "any",
+  })
   async findWebhooks(
     @graphql.Parent() parent: EventType,
     @graphql.Args() args: WebhookFindManyArgs
@@ -235,7 +310,13 @@ export class EventTypeResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [WorkflowsOnEventType], { name: "workflows" })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "read",
+    possession: "any",
+  })
   async findWorkflows(
     @graphql.Parent() parent: EventType,
     @graphql.Args() args: WorkflowsOnEventTypeFindManyArgs
@@ -249,9 +330,15 @@ export class EventTypeResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => DestinationCalendar, {
     nullable: true,
     name: "destinationCalendar",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "read",
+    possession: "any",
   })
   async getDestinationCalendar(
     @graphql.Parent() parent: EventType
@@ -264,9 +351,15 @@ export class EventTypeResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => HashedLink, {
     nullable: true,
     name: "hashedLink",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "read",
+    possession: "any",
   })
   async getHashedLink(
     @graphql.Parent() parent: EventType
@@ -279,9 +372,15 @@ export class EventTypeResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Schedule, {
     nullable: true,
     name: "schedule",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "read",
+    possession: "any",
   })
   async getSchedule(
     @graphql.Parent() parent: EventType
@@ -294,9 +393,15 @@ export class EventTypeResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Team, {
     nullable: true,
     name: "team",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Team",
+    action: "read",
+    possession: "any",
   })
   async getTeam(@graphql.Parent() parent: EventType): Promise<Team | null> {
     const result = await this.service.getTeam(parent.id);

@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { DailyEventReference } from "./DailyEventReference";
 import { DailyEventReferenceCountArgs } from "./DailyEventReferenceCountArgs";
 import { DailyEventReferenceFindManyArgs } from "./DailyEventReferenceFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateDailyEventReferenceArgs } from "./UpdateDailyEventReferenceArgs";
 import { DeleteDailyEventReferenceArgs } from "./DeleteDailyEventReferenceArgs";
 import { Booking } from "../../booking/base/Booking";
 import { DailyEventReferenceService } from "../dailyEventReference.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => DailyEventReference)
 export class DailyEventReferenceResolverBase {
-  constructor(protected readonly service: DailyEventReferenceService) {}
+  constructor(
+    protected readonly service: DailyEventReferenceService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "read",
+    possession: "any",
+  })
   async _dailyEventReferencesMeta(
     @graphql.Args() args: DailyEventReferenceCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class DailyEventReferenceResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [DailyEventReference])
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "read",
+    possession: "any",
+  })
   async dailyEventReferences(
     @graphql.Args() args: DailyEventReferenceFindManyArgs
   ): Promise<DailyEventReference[]> {
     return this.service.dailyEventReferences(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => DailyEventReference, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "read",
+    possession: "own",
+  })
   async dailyEventReference(
     @graphql.Args() args: DailyEventReferenceFindUniqueArgs
   ): Promise<DailyEventReference | null> {
@@ -53,7 +81,13 @@ export class DailyEventReferenceResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => DailyEventReference)
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "create",
+    possession: "any",
+  })
   async createDailyEventReference(
     @graphql.Args() args: CreateDailyEventReferenceArgs
   ): Promise<DailyEventReference> {
@@ -71,7 +105,13 @@ export class DailyEventReferenceResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => DailyEventReference)
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "update",
+    possession: "any",
+  })
   async updateDailyEventReference(
     @graphql.Args() args: UpdateDailyEventReferenceArgs
   ): Promise<DailyEventReference | null> {
@@ -99,6 +139,11 @@ export class DailyEventReferenceResolverBase {
   }
 
   @graphql.Mutation(() => DailyEventReference)
+  @nestAccessControl.UseRoles({
+    resource: "DailyEventReference",
+    action: "delete",
+    possession: "any",
+  })
   async deleteDailyEventReference(
     @graphql.Args() args: DeleteDailyEventReferenceArgs
   ): Promise<DailyEventReference | null> {
@@ -114,9 +159,15 @@ export class DailyEventReferenceResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Booking, {
     nullable: true,
     name: "booking",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
   })
   async getBooking(
     @graphql.Parent() parent: DailyEventReference

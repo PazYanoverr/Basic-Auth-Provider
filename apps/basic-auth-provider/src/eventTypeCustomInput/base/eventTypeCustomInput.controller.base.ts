@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { EventTypeCustomInputService } from "../eventTypeCustomInput.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { EventTypeCustomInputCreateInput } from "./EventTypeCustomInputCreateInput";
 import { EventTypeCustomInput } from "./EventTypeCustomInput";
 import { EventTypeCustomInputFindManyArgs } from "./EventTypeCustomInputFindManyArgs";
 import { EventTypeCustomInputWhereUniqueInput } from "./EventTypeCustomInputWhereUniqueInput";
 import { EventTypeCustomInputUpdateInput } from "./EventTypeCustomInputUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class EventTypeCustomInputControllerBase {
-  constructor(protected readonly service: EventTypeCustomInputService) {}
+  constructor(
+    protected readonly service: EventTypeCustomInputService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: EventTypeCustomInput })
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createEventTypeCustomInput(
     @common.Body() data: EventTypeCustomInputCreateInput
   ): Promise<EventTypeCustomInput> {
@@ -54,9 +72,18 @@ export class EventTypeCustomInputControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [EventTypeCustomInput] })
   @ApiNestedQuery(EventTypeCustomInputFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async eventTypeCustomInputs(
     @common.Req() request: Request
   ): Promise<EventTypeCustomInput[]> {
@@ -79,9 +106,18 @@ export class EventTypeCustomInputControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: EventTypeCustomInput })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async eventTypeCustomInput(
     @common.Param() params: EventTypeCustomInputWhereUniqueInput
   ): Promise<EventTypeCustomInput | null> {
@@ -109,9 +145,18 @@ export class EventTypeCustomInputControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: EventTypeCustomInput })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateEventTypeCustomInput(
     @common.Param() params: EventTypeCustomInputWhereUniqueInput,
     @common.Body() data: EventTypeCustomInputUpdateInput
@@ -153,6 +198,14 @@ export class EventTypeCustomInputControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: EventTypeCustomInput })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteEventTypeCustomInput(
     @common.Param() params: EventTypeCustomInputWhereUniqueInput
   ): Promise<EventTypeCustomInput | null> {

@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { Schedule } from "./Schedule";
 import { ScheduleCountArgs } from "./ScheduleCountArgs";
 import { ScheduleFindManyArgs } from "./ScheduleFindManyArgs";
@@ -26,10 +32,20 @@ import { EventTypeFindManyArgs } from "../../eventType/base/EventTypeFindManyArg
 import { EventType } from "../../eventType/base/EventType";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { ScheduleService } from "../schedule.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => Schedule)
 export class ScheduleResolverBase {
-  constructor(protected readonly service: ScheduleService) {}
+  constructor(
+    protected readonly service: ScheduleService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "read",
+    possession: "any",
+  })
   async _schedulesMeta(
     @graphql.Args() args: ScheduleCountArgs
   ): Promise<MetaQueryPayload> {
@@ -39,14 +55,26 @@ export class ScheduleResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [Schedule])
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "read",
+    possession: "any",
+  })
   async schedules(
     @graphql.Args() args: ScheduleFindManyArgs
   ): Promise<Schedule[]> {
     return this.service.schedules(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => Schedule, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "read",
+    possession: "own",
+  })
   async schedule(
     @graphql.Args() args: ScheduleFindUniqueArgs
   ): Promise<Schedule | null> {
@@ -57,7 +85,13 @@ export class ScheduleResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Schedule)
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "create",
+    possession: "any",
+  })
   async createSchedule(
     @graphql.Args() args: CreateScheduleArgs
   ): Promise<Schedule> {
@@ -73,7 +107,13 @@ export class ScheduleResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => Schedule)
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "update",
+    possession: "any",
+  })
   async updateSchedule(
     @graphql.Args() args: UpdateScheduleArgs
   ): Promise<Schedule | null> {
@@ -99,6 +139,11 @@ export class ScheduleResolverBase {
   }
 
   @graphql.Mutation(() => Schedule)
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "delete",
+    possession: "any",
+  })
   async deleteSchedule(
     @graphql.Args() args: DeleteScheduleArgs
   ): Promise<Schedule | null> {
@@ -114,7 +159,13 @@ export class ScheduleResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [Availability], { name: "availability" })
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "read",
+    possession: "any",
+  })
   async findAvailability(
     @graphql.Parent() parent: Schedule,
     @graphql.Args() args: AvailabilityFindManyArgs
@@ -128,7 +179,13 @@ export class ScheduleResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [EventType], { name: "eventType" })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
+  })
   async findEventType(
     @graphql.Parent() parent: Schedule,
     @graphql.Args() args: EventTypeFindManyArgs
@@ -142,9 +199,15 @@ export class ScheduleResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(@graphql.Parent() parent: Schedule): Promise<OrigUser | null> {
     const result = await this.service.getUser(parent.id);

@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { HashedLink } from "./HashedLink";
 import { HashedLinkCountArgs } from "./HashedLinkCountArgs";
 import { HashedLinkFindManyArgs } from "./HashedLinkFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateHashedLinkArgs } from "./UpdateHashedLinkArgs";
 import { DeleteHashedLinkArgs } from "./DeleteHashedLinkArgs";
 import { EventType } from "../../eventType/base/EventType";
 import { HashedLinkService } from "../hashedLink.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => HashedLink)
 export class HashedLinkResolverBase {
-  constructor(protected readonly service: HashedLinkService) {}
+  constructor(
+    protected readonly service: HashedLinkService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "read",
+    possession: "any",
+  })
   async _hashedLinksMeta(
     @graphql.Args() args: HashedLinkCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class HashedLinkResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [HashedLink])
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "read",
+    possession: "any",
+  })
   async hashedLinks(
     @graphql.Args() args: HashedLinkFindManyArgs
   ): Promise<HashedLink[]> {
     return this.service.hashedLinks(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => HashedLink, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "read",
+    possession: "own",
+  })
   async hashedLink(
     @graphql.Args() args: HashedLinkFindUniqueArgs
   ): Promise<HashedLink | null> {
@@ -53,7 +81,13 @@ export class HashedLinkResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => HashedLink)
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "create",
+    possession: "any",
+  })
   async createHashedLink(
     @graphql.Args() args: CreateHashedLinkArgs
   ): Promise<HashedLink> {
@@ -69,7 +103,13 @@ export class HashedLinkResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => HashedLink)
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "update",
+    possession: "any",
+  })
   async updateHashedLink(
     @graphql.Args() args: UpdateHashedLinkArgs
   ): Promise<HashedLink | null> {
@@ -95,6 +135,11 @@ export class HashedLinkResolverBase {
   }
 
   @graphql.Mutation(() => HashedLink)
+  @nestAccessControl.UseRoles({
+    resource: "HashedLink",
+    action: "delete",
+    possession: "any",
+  })
   async deleteHashedLink(
     @graphql.Args() args: DeleteHashedLinkArgs
   ): Promise<HashedLink | null> {
@@ -110,9 +155,15 @@ export class HashedLinkResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => EventType, {
     nullable: true,
     name: "eventType",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
   })
   async getEventType(
     @graphql.Parent() parent: HashedLink

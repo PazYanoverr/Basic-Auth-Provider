@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { DestinationCalendarService } from "../destinationCalendar.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { DestinationCalendarCreateInput } from "./DestinationCalendarCreateInput";
 import { DestinationCalendar } from "./DestinationCalendar";
 import { DestinationCalendarFindManyArgs } from "./DestinationCalendarFindManyArgs";
 import { DestinationCalendarWhereUniqueInput } from "./DestinationCalendarWhereUniqueInput";
 import { DestinationCalendarUpdateInput } from "./DestinationCalendarUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class DestinationCalendarControllerBase {
-  constructor(protected readonly service: DestinationCalendarService) {}
+  constructor(
+    protected readonly service: DestinationCalendarService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: DestinationCalendar })
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createDestinationCalendar(
     @common.Body() data: DestinationCalendarCreateInput
   ): Promise<DestinationCalendar> {
@@ -90,9 +108,18 @@ export class DestinationCalendarControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [DestinationCalendar] })
   @ApiNestedQuery(DestinationCalendarFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async destinationCalendars(
     @common.Req() request: Request
   ): Promise<DestinationCalendar[]> {
@@ -131,9 +158,18 @@ export class DestinationCalendarControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: DestinationCalendar })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async destinationCalendar(
     @common.Param() params: DestinationCalendarWhereUniqueInput
   ): Promise<DestinationCalendar | null> {
@@ -177,9 +213,18 @@ export class DestinationCalendarControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: DestinationCalendar })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateDestinationCalendar(
     @common.Param() params: DestinationCalendarWhereUniqueInput,
     @common.Body() data: DestinationCalendarUpdateInput
@@ -257,6 +302,14 @@ export class DestinationCalendarControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: DestinationCalendar })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteDestinationCalendar(
     @common.Param() params: DestinationCalendarWhereUniqueInput
   ): Promise<DestinationCalendar | null> {

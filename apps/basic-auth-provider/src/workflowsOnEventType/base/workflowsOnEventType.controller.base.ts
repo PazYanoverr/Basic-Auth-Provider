@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { WorkflowsOnEventTypeService } from "../workflowsOnEventType.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { WorkflowsOnEventTypeCreateInput } from "./WorkflowsOnEventTypeCreateInput";
 import { WorkflowsOnEventType } from "./WorkflowsOnEventType";
 import { WorkflowsOnEventTypeFindManyArgs } from "./WorkflowsOnEventTypeFindManyArgs";
 import { WorkflowsOnEventTypeWhereUniqueInput } from "./WorkflowsOnEventTypeWhereUniqueInput";
 import { WorkflowsOnEventTypeUpdateInput } from "./WorkflowsOnEventTypeUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class WorkflowsOnEventTypeControllerBase {
-  constructor(protected readonly service: WorkflowsOnEventTypeService) {}
+  constructor(
+    protected readonly service: WorkflowsOnEventTypeService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: WorkflowsOnEventType })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createWorkflowsOnEventType(
     @common.Body() data: WorkflowsOnEventTypeCreateInput
   ): Promise<WorkflowsOnEventType> {
@@ -60,9 +78,18 @@ export class WorkflowsOnEventTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [WorkflowsOnEventType] })
   @ApiNestedQuery(WorkflowsOnEventTypeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async workflowsOnEventTypes(
     @common.Req() request: Request
   ): Promise<WorkflowsOnEventType[]> {
@@ -87,9 +114,18 @@ export class WorkflowsOnEventTypeControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: WorkflowsOnEventType })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async workflowsOnEventType(
     @common.Param() params: WorkflowsOnEventTypeWhereUniqueInput
   ): Promise<WorkflowsOnEventType | null> {
@@ -119,9 +155,18 @@ export class WorkflowsOnEventTypeControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: WorkflowsOnEventType })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateWorkflowsOnEventType(
     @common.Param() params: WorkflowsOnEventTypeWhereUniqueInput,
     @common.Body() data: WorkflowsOnEventTypeUpdateInput
@@ -169,6 +214,14 @@ export class WorkflowsOnEventTypeControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: WorkflowsOnEventType })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowsOnEventType",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteWorkflowsOnEventType(
     @common.Param() params: WorkflowsOnEventTypeWhereUniqueInput
   ): Promise<WorkflowsOnEventType | null> {

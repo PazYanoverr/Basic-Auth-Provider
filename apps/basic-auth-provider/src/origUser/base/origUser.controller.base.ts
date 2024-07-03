@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { OrigUserService } from "../origUser.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { OrigUserCreateInput } from "./OrigUserCreateInput";
 import { OrigUser } from "./OrigUser";
 import { OrigUserFindManyArgs } from "./OrigUserFindManyArgs";
@@ -65,10 +69,24 @@ import { WorkflowFindManyArgs } from "../../workflow/base/WorkflowFindManyArgs";
 import { Workflow } from "../../workflow/base/Workflow";
 import { WorkflowWhereUniqueInput } from "../../workflow/base/WorkflowWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class OrigUserControllerBase {
-  constructor(protected readonly service: OrigUserService) {}
+  constructor(
+    protected readonly service: OrigUserService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: OrigUser })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createOrigUser(
     @common.Body() data: OrigUserCreateInput
   ): Promise<OrigUser> {
@@ -129,9 +147,18 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [OrigUser] })
   @ApiNestedQuery(OrigUserFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async origUsers(@common.Req() request: Request): Promise<OrigUser[]> {
     const args = plainToClass(OrigUserFindManyArgs, request.query);
     return this.service.origUsers({
@@ -183,9 +210,18 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: OrigUser })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async origUser(
     @common.Param() params: OrigUserWhereUniqueInput
   ): Promise<OrigUser | null> {
@@ -244,9 +280,18 @@ export class OrigUserControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: OrigUser })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateOrigUser(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() data: OrigUserUpdateInput
@@ -321,6 +366,14 @@ export class OrigUserControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: OrigUser })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteOrigUser(
     @common.Param() params: OrigUserWhereUniqueInput
   ): Promise<OrigUser | null> {
@@ -382,8 +435,14 @@ export class OrigUserControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/accounts")
   @ApiNestedQuery(AccountFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Account",
+    action: "read",
+    possession: "any",
+  })
   async findAccounts(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -420,6 +479,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/accounts")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectAccounts(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: AccountWhereUniqueInput[]
@@ -437,6 +501,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/accounts")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateAccounts(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: AccountWhereUniqueInput[]
@@ -454,6 +523,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/accounts")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectAccounts(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: AccountWhereUniqueInput[]
@@ -470,8 +544,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/apiKeys")
   @ApiNestedQuery(ApiKeyFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ApiKey",
+    action: "read",
+    possession: "any",
+  })
   async findApiKeys(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -509,6 +589,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/apiKeys")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectApiKeys(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ApiKeyWhereUniqueInput[]
@@ -526,6 +611,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/apiKeys")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateApiKeys(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ApiKeyWhereUniqueInput[]
@@ -543,6 +633,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/apiKeys")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectApiKeys(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ApiKeyWhereUniqueInput[]
@@ -559,8 +654,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/availability")
   @ApiNestedQuery(AvailabilityFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "read",
+    possession: "any",
+  })
   async findAvailability(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -605,6 +706,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/availability")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectAvailability(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: AvailabilityWhereUniqueInput[]
@@ -622,6 +728,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/availability")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateAvailability(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: AvailabilityWhereUniqueInput[]
@@ -639,6 +750,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/availability")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectAvailability(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: AvailabilityWhereUniqueInput[]
@@ -655,8 +771,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/bookings")
   @ApiNestedQuery(BookingFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
+  })
   async findBookings(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -723,6 +845,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/bookings")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectBookings(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: BookingWhereUniqueInput[]
@@ -740,6 +867,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/bookings")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateBookings(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: BookingWhereUniqueInput[]
@@ -757,6 +889,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/bookings")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectBookings(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: BookingWhereUniqueInput[]
@@ -773,8 +910,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/credentials")
   @ApiNestedQuery(CredentialFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "any",
+  })
   async findCredentials(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -809,6 +952,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/credentials")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectCredentials(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: CredentialWhereUniqueInput[]
@@ -826,6 +974,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/credentials")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateCredentials(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: CredentialWhereUniqueInput[]
@@ -843,6 +996,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/credentials")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectCredentials(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: CredentialWhereUniqueInput[]
@@ -859,8 +1017,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/eventTypes")
   @ApiNestedQuery(EventTypeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
+  })
   async findEventTypes(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -938,6 +1102,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/eventTypes")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectEventTypes(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: EventTypeWhereUniqueInput[]
@@ -955,6 +1124,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/eventTypes")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateEventTypes(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: EventTypeWhereUniqueInput[]
@@ -972,6 +1146,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/eventTypes")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectEventTypes(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: EventTypeWhereUniqueInput[]
@@ -988,8 +1167,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/feedback")
   @ApiNestedQuery(FeedbackFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Feedback",
+    action: "read",
+    possession: "any",
+  })
   async findFeedback(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -1019,6 +1204,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/feedback")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectFeedback(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: FeedbackWhereUniqueInput[]
@@ -1036,6 +1226,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/feedback")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateFeedback(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: FeedbackWhereUniqueInput[]
@@ -1053,6 +1248,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/feedback")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectFeedback(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: FeedbackWhereUniqueInput[]
@@ -1069,8 +1269,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/impersonatedBy")
   @ApiNestedQuery(ImpersonationFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "read",
+    possession: "any",
+  })
   async findImpersonatedBy(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -1104,6 +1310,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/impersonatedBy")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectImpersonatedBy(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ImpersonationWhereUniqueInput[]
@@ -1121,6 +1332,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/impersonatedBy")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateImpersonatedBy(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ImpersonationWhereUniqueInput[]
@@ -1138,6 +1354,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/impersonatedBy")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectImpersonatedBy(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ImpersonationWhereUniqueInput[]
@@ -1154,8 +1375,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/impersonatedUsers")
   @ApiNestedQuery(ImpersonationFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Impersonation",
+    action: "read",
+    possession: "any",
+  })
   async findImpersonatedUsers(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -1189,6 +1416,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/impersonatedUsers")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectImpersonatedUsers(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ImpersonationWhereUniqueInput[]
@@ -1206,6 +1438,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/impersonatedUsers")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateImpersonatedUsers(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ImpersonationWhereUniqueInput[]
@@ -1223,6 +1460,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/impersonatedUsers")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectImpersonatedUsers(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ImpersonationWhereUniqueInput[]
@@ -1239,8 +1481,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/schedules")
   @ApiNestedQuery(ScheduleFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "read",
+    possession: "any",
+  })
   async findSchedules(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -1269,6 +1517,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/schedules")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectSchedules(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ScheduleWhereUniqueInput[]
@@ -1286,6 +1539,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/schedules")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateSchedules(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ScheduleWhereUniqueInput[]
@@ -1303,6 +1561,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/schedules")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectSchedules(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: ScheduleWhereUniqueInput[]
@@ -1319,8 +1582,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/selectedCalendars")
   @ApiNestedQuery(SelectedCalendarFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "SelectedCalendar",
+    action: "read",
+    possession: "any",
+  })
   async findSelectedCalendars(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -1349,6 +1618,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/selectedCalendars")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectSelectedCalendars(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: SelectedCalendarWhereUniqueInput[]
@@ -1366,6 +1640,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/selectedCalendars")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateSelectedCalendars(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: SelectedCalendarWhereUniqueInput[]
@@ -1383,6 +1662,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/selectedCalendars")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectSelectedCalendars(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: SelectedCalendarWhereUniqueInput[]
@@ -1399,8 +1683,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/sessions")
   @ApiNestedQuery(SessionFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Session",
+    action: "read",
+    possession: "any",
+  })
   async findSessions(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -1429,6 +1719,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/sessions")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectSessions(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: SessionWhereUniqueInput[]
@@ -1446,6 +1741,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/sessions")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateSessions(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: SessionWhereUniqueInput[]
@@ -1463,6 +1763,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/sessions")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectSessions(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: SessionWhereUniqueInput[]
@@ -1479,8 +1784,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/teams")
   @ApiNestedQuery(MembershipFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Membership",
+    action: "read",
+    possession: "any",
+  })
   async findTeams(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -1515,6 +1826,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/teams")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectTeams(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: MembershipWhereUniqueInput[]
@@ -1532,6 +1848,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/teams")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateTeams(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: MembershipWhereUniqueInput[]
@@ -1549,6 +1870,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/teams")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectTeams(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: MembershipWhereUniqueInput[]
@@ -1565,8 +1891,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/webhooks")
   @ApiNestedQuery(WebhookFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Webhook",
+    action: "read",
+    possession: "any",
+  })
   async findWebhooks(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -1613,6 +1945,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/webhooks")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectWebhooks(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: WebhookWhereUniqueInput[]
@@ -1630,6 +1967,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/webhooks")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateWebhooks(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: WebhookWhereUniqueInput[]
@@ -1647,6 +1989,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/webhooks")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectWebhooks(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: WebhookWhereUniqueInput[]
@@ -1663,8 +2010,14 @@ export class OrigUserControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/workflows")
   @ApiNestedQuery(WorkflowFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "read",
+    possession: "any",
+  })
   async findWorkflows(
     @common.Req() request: Request,
     @common.Param() params: OrigUserWhereUniqueInput
@@ -1695,6 +2048,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Post("/:id/workflows")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async connectWorkflows(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: WorkflowWhereUniqueInput[]
@@ -1712,6 +2070,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Patch("/:id/workflows")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async updateWorkflows(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: WorkflowWhereUniqueInput[]
@@ -1729,6 +2092,11 @@ export class OrigUserControllerBase {
   }
 
   @common.Delete("/:id/workflows")
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "update",
+    possession: "any",
+  })
   async disconnectWorkflows(
     @common.Param() params: OrigUserWhereUniqueInput,
     @common.Body() body: WorkflowWhereUniqueInput[]

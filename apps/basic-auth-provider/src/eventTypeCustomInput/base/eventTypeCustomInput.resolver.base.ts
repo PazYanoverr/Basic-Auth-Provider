@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { EventTypeCustomInput } from "./EventTypeCustomInput";
 import { EventTypeCustomInputCountArgs } from "./EventTypeCustomInputCountArgs";
 import { EventTypeCustomInputFindManyArgs } from "./EventTypeCustomInputFindManyArgs";
@@ -22,10 +28,20 @@ import { UpdateEventTypeCustomInputArgs } from "./UpdateEventTypeCustomInputArgs
 import { DeleteEventTypeCustomInputArgs } from "./DeleteEventTypeCustomInputArgs";
 import { EventType } from "../../eventType/base/EventType";
 import { EventTypeCustomInputService } from "../eventTypeCustomInput.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => EventTypeCustomInput)
 export class EventTypeCustomInputResolverBase {
-  constructor(protected readonly service: EventTypeCustomInputService) {}
+  constructor(
+    protected readonly service: EventTypeCustomInputService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "read",
+    possession: "any",
+  })
   async _eventTypeCustomInputsMeta(
     @graphql.Args() args: EventTypeCustomInputCountArgs
   ): Promise<MetaQueryPayload> {
@@ -35,14 +51,26 @@ export class EventTypeCustomInputResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [EventTypeCustomInput])
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "read",
+    possession: "any",
+  })
   async eventTypeCustomInputs(
     @graphql.Args() args: EventTypeCustomInputFindManyArgs
   ): Promise<EventTypeCustomInput[]> {
     return this.service.eventTypeCustomInputs(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => EventTypeCustomInput, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "read",
+    possession: "own",
+  })
   async eventTypeCustomInput(
     @graphql.Args() args: EventTypeCustomInputFindUniqueArgs
   ): Promise<EventTypeCustomInput | null> {
@@ -53,7 +81,13 @@ export class EventTypeCustomInputResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => EventTypeCustomInput)
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "create",
+    possession: "any",
+  })
   async createEventTypeCustomInput(
     @graphql.Args() args: CreateEventTypeCustomInputArgs
   ): Promise<EventTypeCustomInput> {
@@ -69,7 +103,13 @@ export class EventTypeCustomInputResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => EventTypeCustomInput)
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "update",
+    possession: "any",
+  })
   async updateEventTypeCustomInput(
     @graphql.Args() args: UpdateEventTypeCustomInputArgs
   ): Promise<EventTypeCustomInput | null> {
@@ -95,6 +135,11 @@ export class EventTypeCustomInputResolverBase {
   }
 
   @graphql.Mutation(() => EventTypeCustomInput)
+  @nestAccessControl.UseRoles({
+    resource: "EventTypeCustomInput",
+    action: "delete",
+    possession: "any",
+  })
   async deleteEventTypeCustomInput(
     @graphql.Args() args: DeleteEventTypeCustomInputArgs
   ): Promise<EventTypeCustomInput | null> {
@@ -110,9 +155,15 @@ export class EventTypeCustomInputResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => EventType, {
     nullable: true,
     name: "eventType",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
   })
   async getEventType(
     @graphql.Parent() parent: EventTypeCustomInput

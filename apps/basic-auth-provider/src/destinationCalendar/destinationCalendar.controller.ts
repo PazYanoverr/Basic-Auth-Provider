@@ -1,12 +1,17 @@
 import * as common from "@nestjs/common";
 import * as swagger from "@nestjs/swagger";
+import * as nestAccessControl from "nest-access-control";
 import { DestinationCalendarService } from "./destinationCalendar.service";
 import { DestinationCalendarControllerBase } from "./base/destinationCalendar.controller.base";
 
 @swagger.ApiTags("destinationCalendars")
 @common.Controller("destinationCalendars")
 export class DestinationCalendarController extends DestinationCalendarControllerBase {
-  constructor(protected readonly service: DestinationCalendarService) {
-    super(service);
+  constructor(
+    protected readonly service: DestinationCalendarService,
+    @nestAccessControl.InjectRolesBuilder()
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {
+    super(service, rolesBuilder);
   }
 }

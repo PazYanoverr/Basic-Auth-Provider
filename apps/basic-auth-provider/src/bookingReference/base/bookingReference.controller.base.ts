@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { BookingReferenceService } from "../bookingReference.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { BookingReferenceCreateInput } from "./BookingReferenceCreateInput";
 import { BookingReference } from "./BookingReference";
 import { BookingReferenceFindManyArgs } from "./BookingReferenceFindManyArgs";
 import { BookingReferenceWhereUniqueInput } from "./BookingReferenceWhereUniqueInput";
 import { BookingReferenceUpdateInput } from "./BookingReferenceUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class BookingReferenceControllerBase {
-  constructor(protected readonly service: BookingReferenceService) {}
+  constructor(
+    protected readonly service: BookingReferenceService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: BookingReference })
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createBookingReference(
     @common.Body() data: BookingReferenceCreateInput
   ): Promise<BookingReference> {
@@ -59,9 +77,18 @@ export class BookingReferenceControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [BookingReference] })
   @ApiNestedQuery(BookingReferenceFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async bookingReferences(
     @common.Req() request: Request
   ): Promise<BookingReference[]> {
@@ -87,9 +114,18 @@ export class BookingReferenceControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: BookingReference })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async bookingReference(
     @common.Param() params: BookingReferenceWhereUniqueInput
   ): Promise<BookingReference | null> {
@@ -120,9 +156,18 @@ export class BookingReferenceControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: BookingReference })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateBookingReference(
     @common.Param() params: BookingReferenceWhereUniqueInput,
     @common.Body() data: BookingReferenceUpdateInput
@@ -169,6 +214,14 @@ export class BookingReferenceControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: BookingReference })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "BookingReference",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteBookingReference(
     @common.Param() params: BookingReferenceWhereUniqueInput
   ): Promise<BookingReference | null> {

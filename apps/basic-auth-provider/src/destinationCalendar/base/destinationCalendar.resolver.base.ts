@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { DestinationCalendar } from "./DestinationCalendar";
 import { DestinationCalendarCountArgs } from "./DestinationCalendarCountArgs";
 import { DestinationCalendarFindManyArgs } from "./DestinationCalendarFindManyArgs";
@@ -25,10 +31,20 @@ import { Credential } from "../../credential/base/Credential";
 import { EventType } from "../../eventType/base/EventType";
 import { OrigUser } from "../../origUser/base/OrigUser";
 import { DestinationCalendarService } from "../destinationCalendar.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => DestinationCalendar)
 export class DestinationCalendarResolverBase {
-  constructor(protected readonly service: DestinationCalendarService) {}
+  constructor(
+    protected readonly service: DestinationCalendarService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "read",
+    possession: "any",
+  })
   async _destinationCalendarsMeta(
     @graphql.Args() args: DestinationCalendarCountArgs
   ): Promise<MetaQueryPayload> {
@@ -38,14 +54,26 @@ export class DestinationCalendarResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [DestinationCalendar])
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "read",
+    possession: "any",
+  })
   async destinationCalendars(
     @graphql.Args() args: DestinationCalendarFindManyArgs
   ): Promise<DestinationCalendar[]> {
     return this.service.destinationCalendars(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => DestinationCalendar, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "read",
+    possession: "own",
+  })
   async destinationCalendar(
     @graphql.Args() args: DestinationCalendarFindUniqueArgs
   ): Promise<DestinationCalendar | null> {
@@ -56,7 +84,13 @@ export class DestinationCalendarResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => DestinationCalendar)
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "create",
+    possession: "any",
+  })
   async createDestinationCalendar(
     @graphql.Args() args: CreateDestinationCalendarArgs
   ): Promise<DestinationCalendar> {
@@ -92,7 +126,13 @@ export class DestinationCalendarResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => DestinationCalendar)
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "update",
+    possession: "any",
+  })
   async updateDestinationCalendar(
     @graphql.Args() args: UpdateDestinationCalendarArgs
   ): Promise<DestinationCalendar | null> {
@@ -138,6 +178,11 @@ export class DestinationCalendarResolverBase {
   }
 
   @graphql.Mutation(() => DestinationCalendar)
+  @nestAccessControl.UseRoles({
+    resource: "DestinationCalendar",
+    action: "delete",
+    possession: "any",
+  })
   async deleteDestinationCalendar(
     @graphql.Args() args: DeleteDestinationCalendarArgs
   ): Promise<DestinationCalendar | null> {
@@ -153,9 +198,15 @@ export class DestinationCalendarResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Booking, {
     nullable: true,
     name: "booking",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Booking",
+    action: "read",
+    possession: "any",
   })
   async getBooking(
     @graphql.Parent() parent: DestinationCalendar
@@ -168,9 +219,15 @@ export class DestinationCalendarResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Credential, {
     nullable: true,
     name: "credential",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "any",
   })
   async getCredential(
     @graphql.Parent() parent: DestinationCalendar
@@ -183,9 +240,15 @@ export class DestinationCalendarResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => EventType, {
     nullable: true,
     name: "eventType",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
   })
   async getEventType(
     @graphql.Parent() parent: DestinationCalendar
@@ -198,9 +261,15 @@ export class DestinationCalendarResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => OrigUser, {
     nullable: true,
     name: "user",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "OrigUser",
+    action: "read",
+    possession: "any",
   })
   async getUser(
     @graphql.Parent() parent: DestinationCalendar

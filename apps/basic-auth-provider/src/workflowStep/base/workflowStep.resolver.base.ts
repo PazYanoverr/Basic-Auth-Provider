@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { WorkflowStep } from "./WorkflowStep";
 import { WorkflowStepCountArgs } from "./WorkflowStepCountArgs";
 import { WorkflowStepFindManyArgs } from "./WorkflowStepFindManyArgs";
@@ -24,10 +30,20 @@ import { WorkflowReminderFindManyArgs } from "../../workflowReminder/base/Workfl
 import { WorkflowReminder } from "../../workflowReminder/base/WorkflowReminder";
 import { Workflow } from "../../workflow/base/Workflow";
 import { WorkflowStepService } from "../workflowStep.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => WorkflowStep)
 export class WorkflowStepResolverBase {
-  constructor(protected readonly service: WorkflowStepService) {}
+  constructor(
+    protected readonly service: WorkflowStepService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "read",
+    possession: "any",
+  })
   async _workflowStepsMeta(
     @graphql.Args() args: WorkflowStepCountArgs
   ): Promise<MetaQueryPayload> {
@@ -37,14 +53,26 @@ export class WorkflowStepResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [WorkflowStep])
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "read",
+    possession: "any",
+  })
   async workflowSteps(
     @graphql.Args() args: WorkflowStepFindManyArgs
   ): Promise<WorkflowStep[]> {
     return this.service.workflowSteps(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => WorkflowStep, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "read",
+    possession: "own",
+  })
   async workflowStep(
     @graphql.Args() args: WorkflowStepFindUniqueArgs
   ): Promise<WorkflowStep | null> {
@@ -55,7 +83,13 @@ export class WorkflowStepResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => WorkflowStep)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "create",
+    possession: "any",
+  })
   async createWorkflowStep(
     @graphql.Args() args: CreateWorkflowStepArgs
   ): Promise<WorkflowStep> {
@@ -71,7 +105,13 @@ export class WorkflowStepResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => WorkflowStep)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "update",
+    possession: "any",
+  })
   async updateWorkflowStep(
     @graphql.Args() args: UpdateWorkflowStepArgs
   ): Promise<WorkflowStep | null> {
@@ -97,6 +137,11 @@ export class WorkflowStepResolverBase {
   }
 
   @graphql.Mutation(() => WorkflowStep)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowStep",
+    action: "delete",
+    possession: "any",
+  })
   async deleteWorkflowStep(
     @graphql.Args() args: DeleteWorkflowStepArgs
   ): Promise<WorkflowStep | null> {
@@ -112,7 +157,13 @@ export class WorkflowStepResolverBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => [WorkflowReminder], { name: "workflowReminders" })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "read",
+    possession: "any",
+  })
   async findWorkflowReminders(
     @graphql.Parent() parent: WorkflowStep,
     @graphql.Args() args: WorkflowReminderFindManyArgs
@@ -126,9 +177,15 @@ export class WorkflowStepResolverBase {
     return results;
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.ResolveField(() => Workflow, {
     nullable: true,
     name: "workflow",
+  })
+  @nestAccessControl.UseRoles({
+    resource: "Workflow",
+    action: "read",
+    possession: "any",
   })
   async getWorkflow(
     @graphql.Parent() parent: WorkflowStep

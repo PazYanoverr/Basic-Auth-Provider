@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ResetPasswordRequestService } from "../resetPasswordRequest.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ResetPasswordRequestCreateInput } from "./ResetPasswordRequestCreateInput";
 import { ResetPasswordRequest } from "./ResetPasswordRequest";
 import { ResetPasswordRequestFindManyArgs } from "./ResetPasswordRequestFindManyArgs";
 import { ResetPasswordRequestWhereUniqueInput } from "./ResetPasswordRequestWhereUniqueInput";
 import { ResetPasswordRequestUpdateInput } from "./ResetPasswordRequestUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ResetPasswordRequestControllerBase {
-  constructor(protected readonly service: ResetPasswordRequestService) {}
+  constructor(
+    protected readonly service: ResetPasswordRequestService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: ResetPasswordRequest })
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createResetPasswordRequest(
     @common.Body() data: ResetPasswordRequestCreateInput
   ): Promise<ResetPasswordRequest> {
@@ -42,9 +60,18 @@ export class ResetPasswordRequestControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [ResetPasswordRequest] })
   @ApiNestedQuery(ResetPasswordRequestFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async resetPasswordRequests(
     @common.Req() request: Request
   ): Promise<ResetPasswordRequest[]> {
@@ -61,9 +88,18 @@ export class ResetPasswordRequestControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: ResetPasswordRequest })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async resetPasswordRequest(
     @common.Param() params: ResetPasswordRequestWhereUniqueInput
   ): Promise<ResetPasswordRequest | null> {
@@ -85,9 +121,18 @@ export class ResetPasswordRequestControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: ResetPasswordRequest })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateResetPasswordRequest(
     @common.Param() params: ResetPasswordRequestWhereUniqueInput,
     @common.Body() data: ResetPasswordRequestUpdateInput
@@ -117,6 +162,14 @@ export class ResetPasswordRequestControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: ResetPasswordRequest })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "ResetPasswordRequest",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteResetPasswordRequest(
     @common.Param() params: ResetPasswordRequestWhereUniqueInput
   ): Promise<ResetPasswordRequest | null> {

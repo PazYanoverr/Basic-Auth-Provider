@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { ScheduleService } from "../schedule.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { ScheduleCreateInput } from "./ScheduleCreateInput";
 import { Schedule } from "./Schedule";
 import { ScheduleFindManyArgs } from "./ScheduleFindManyArgs";
@@ -29,10 +33,24 @@ import { EventTypeFindManyArgs } from "../../eventType/base/EventTypeFindManyArg
 import { EventType } from "../../eventType/base/EventType";
 import { EventTypeWhereUniqueInput } from "../../eventType/base/EventTypeWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class ScheduleControllerBase {
-  constructor(protected readonly service: ScheduleService) {}
+  constructor(
+    protected readonly service: ScheduleService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: Schedule })
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createSchedule(
     @common.Body() data: ScheduleCreateInput
   ): Promise<Schedule> {
@@ -58,9 +76,18 @@ export class ScheduleControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [Schedule] })
   @ApiNestedQuery(ScheduleFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async schedules(@common.Req() request: Request): Promise<Schedule[]> {
     const args = plainToClass(ScheduleFindManyArgs, request.query);
     return this.service.schedules({
@@ -79,9 +106,18 @@ export class ScheduleControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: Schedule })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async schedule(
     @common.Param() params: ScheduleWhereUniqueInput
   ): Promise<Schedule | null> {
@@ -107,9 +143,18 @@ export class ScheduleControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: Schedule })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateSchedule(
     @common.Param() params: ScheduleWhereUniqueInput,
     @common.Body() data: ScheduleUpdateInput
@@ -149,6 +194,14 @@ export class ScheduleControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: Schedule })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteSchedule(
     @common.Param() params: ScheduleWhereUniqueInput
   ): Promise<Schedule | null> {
@@ -177,8 +230,14 @@ export class ScheduleControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/availability")
   @ApiNestedQuery(AvailabilityFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Availability",
+    action: "read",
+    possession: "any",
+  })
   async findAvailability(
     @common.Req() request: Request,
     @common.Param() params: ScheduleWhereUniqueInput
@@ -223,6 +282,11 @@ export class ScheduleControllerBase {
   }
 
   @common.Post("/:id/availability")
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "update",
+    possession: "any",
+  })
   async connectAvailability(
     @common.Param() params: ScheduleWhereUniqueInput,
     @common.Body() body: AvailabilityWhereUniqueInput[]
@@ -240,6 +304,11 @@ export class ScheduleControllerBase {
   }
 
   @common.Patch("/:id/availability")
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "update",
+    possession: "any",
+  })
   async updateAvailability(
     @common.Param() params: ScheduleWhereUniqueInput,
     @common.Body() body: AvailabilityWhereUniqueInput[]
@@ -257,6 +326,11 @@ export class ScheduleControllerBase {
   }
 
   @common.Delete("/:id/availability")
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "update",
+    possession: "any",
+  })
   async disconnectAvailability(
     @common.Param() params: ScheduleWhereUniqueInput,
     @common.Body() body: AvailabilityWhereUniqueInput[]
@@ -273,8 +347,14 @@ export class ScheduleControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/eventType")
   @ApiNestedQuery(EventTypeFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "EventType",
+    action: "read",
+    possession: "any",
+  })
   async findEventType(
     @common.Req() request: Request,
     @common.Param() params: ScheduleWhereUniqueInput
@@ -352,6 +432,11 @@ export class ScheduleControllerBase {
   }
 
   @common.Post("/:id/eventType")
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "update",
+    possession: "any",
+  })
   async connectEventType(
     @common.Param() params: ScheduleWhereUniqueInput,
     @common.Body() body: EventTypeWhereUniqueInput[]
@@ -369,6 +454,11 @@ export class ScheduleControllerBase {
   }
 
   @common.Patch("/:id/eventType")
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "update",
+    possession: "any",
+  })
   async updateEventType(
     @common.Param() params: ScheduleWhereUniqueInput,
     @common.Body() body: EventTypeWhereUniqueInput[]
@@ -386,6 +476,11 @@ export class ScheduleControllerBase {
   }
 
   @common.Delete("/:id/eventType")
+  @nestAccessControl.UseRoles({
+    resource: "Schedule",
+    action: "update",
+    possession: "any",
+  })
   async disconnectEventType(
     @common.Param() params: ScheduleWhereUniqueInput,
     @common.Body() body: EventTypeWhereUniqueInput[]

@@ -13,6 +13,12 @@ import * as graphql from "@nestjs/graphql";
 import { GraphQLError } from "graphql";
 import { isRecordNotFoundError } from "../../prisma.util";
 import { MetaQueryPayload } from "../../util/MetaQueryPayload";
+import * as nestAccessControl from "nest-access-control";
+import * as gqlACGuard from "../../auth/gqlAC.guard";
+import { GqlDefaultAuthGuard } from "../../auth/gqlDefaultAuth.guard";
+import * as common from "@nestjs/common";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
 import { VerificationToken } from "./VerificationToken";
 import { VerificationTokenCountArgs } from "./VerificationTokenCountArgs";
 import { VerificationTokenFindManyArgs } from "./VerificationTokenFindManyArgs";
@@ -21,10 +27,20 @@ import { CreateVerificationTokenArgs } from "./CreateVerificationTokenArgs";
 import { UpdateVerificationTokenArgs } from "./UpdateVerificationTokenArgs";
 import { DeleteVerificationTokenArgs } from "./DeleteVerificationTokenArgs";
 import { VerificationTokenService } from "../verificationToken.service";
+@common.UseGuards(GqlDefaultAuthGuard, gqlACGuard.GqlACGuard)
 @graphql.Resolver(() => VerificationToken)
 export class VerificationTokenResolverBase {
-  constructor(protected readonly service: VerificationTokenService) {}
+  constructor(
+    protected readonly service: VerificationTokenService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
 
+  @graphql.Query(() => MetaQueryPayload)
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "read",
+    possession: "any",
+  })
   async _verificationTokensMeta(
     @graphql.Args() args: VerificationTokenCountArgs
   ): Promise<MetaQueryPayload> {
@@ -34,14 +50,26 @@ export class VerificationTokenResolverBase {
     };
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => [VerificationToken])
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "read",
+    possession: "any",
+  })
   async verificationTokens(
     @graphql.Args() args: VerificationTokenFindManyArgs
   ): Promise<VerificationToken[]> {
     return this.service.verificationTokens(args);
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @graphql.Query(() => VerificationToken, { nullable: true })
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "read",
+    possession: "own",
+  })
   async verificationToken(
     @graphql.Args() args: VerificationTokenFindUniqueArgs
   ): Promise<VerificationToken | null> {
@@ -52,7 +80,13 @@ export class VerificationTokenResolverBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => VerificationToken)
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "create",
+    possession: "any",
+  })
   async createVerificationToken(
     @graphql.Args() args: CreateVerificationTokenArgs
   ): Promise<VerificationToken> {
@@ -62,7 +96,13 @@ export class VerificationTokenResolverBase {
     });
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @graphql.Mutation(() => VerificationToken)
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "update",
+    possession: "any",
+  })
   async updateVerificationToken(
     @graphql.Args() args: UpdateVerificationTokenArgs
   ): Promise<VerificationToken | null> {
@@ -82,6 +122,11 @@ export class VerificationTokenResolverBase {
   }
 
   @graphql.Mutation(() => VerificationToken)
+  @nestAccessControl.UseRoles({
+    resource: "VerificationToken",
+    action: "delete",
+    possession: "any",
+  })
   async deleteVerificationToken(
     @graphql.Args() args: DeleteVerificationTokenArgs
   ): Promise<VerificationToken | null> {

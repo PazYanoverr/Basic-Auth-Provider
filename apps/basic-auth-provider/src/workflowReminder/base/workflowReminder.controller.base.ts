@@ -16,17 +16,35 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { WorkflowReminderService } from "../workflowReminder.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { WorkflowReminderCreateInput } from "./WorkflowReminderCreateInput";
 import { WorkflowReminder } from "./WorkflowReminder";
 import { WorkflowReminderFindManyArgs } from "./WorkflowReminderFindManyArgs";
 import { WorkflowReminderWhereUniqueInput } from "./WorkflowReminderWhereUniqueInput";
 import { WorkflowReminderUpdateInput } from "./WorkflowReminderUpdateInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class WorkflowReminderControllerBase {
-  constructor(protected readonly service: WorkflowReminderService) {}
+  constructor(
+    protected readonly service: WorkflowReminderService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: WorkflowReminder })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createWorkflowReminder(
     @common.Body() data: WorkflowReminderCreateInput
   ): Promise<WorkflowReminder> {
@@ -66,9 +84,18 @@ export class WorkflowReminderControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [WorkflowReminder] })
   @ApiNestedQuery(WorkflowReminderFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async workflowReminders(
     @common.Req() request: Request
   ): Promise<WorkflowReminder[]> {
@@ -97,9 +124,18 @@ export class WorkflowReminderControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: WorkflowReminder })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async workflowReminder(
     @common.Param() params: WorkflowReminderWhereUniqueInput
   ): Promise<WorkflowReminder | null> {
@@ -133,9 +169,18 @@ export class WorkflowReminderControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: WorkflowReminder })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateWorkflowReminder(
     @common.Param() params: WorkflowReminderWhereUniqueInput,
     @common.Body() data: WorkflowReminderUpdateInput
@@ -189,6 +234,14 @@ export class WorkflowReminderControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: WorkflowReminder })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "WorkflowReminder",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteWorkflowReminder(
     @common.Param() params: WorkflowReminderWhereUniqueInput
   ): Promise<WorkflowReminder | null> {

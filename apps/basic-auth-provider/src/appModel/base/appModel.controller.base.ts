@@ -16,7 +16,11 @@ import * as errors from "../../errors";
 import { Request } from "express";
 import { plainToClass } from "class-transformer";
 import { ApiNestedQuery } from "../../decorators/api-nested-query.decorator";
+import * as nestAccessControl from "nest-access-control";
+import * as defaultAuthGuard from "../../auth/defaultAuth.guard";
 import { AppModelService } from "../appModel.service";
+import { AclValidateRequestInterceptor } from "../../interceptors/aclValidateRequest.interceptor";
+import { AclFilterResponseInterceptor } from "../../interceptors/aclFilterResponse.interceptor";
 import { AppModelCreateInput } from "./AppModelCreateInput";
 import { AppModel } from "./AppModel";
 import { AppModelFindManyArgs } from "./AppModelFindManyArgs";
@@ -32,10 +36,24 @@ import { WebhookFindManyArgs } from "../../webhook/base/WebhookFindManyArgs";
 import { Webhook } from "../../webhook/base/Webhook";
 import { WebhookWhereUniqueInput } from "../../webhook/base/WebhookWhereUniqueInput";
 
+@swagger.ApiBearerAuth()
+@common.UseGuards(defaultAuthGuard.DefaultAuthGuard, nestAccessControl.ACGuard)
 export class AppModelControllerBase {
-  constructor(protected readonly service: AppModelService) {}
+  constructor(
+    protected readonly service: AppModelService,
+    protected readonly rolesBuilder: nestAccessControl.RolesBuilder
+  ) {}
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Post()
   @swagger.ApiCreatedResponse({ type: AppModel })
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "create",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async createAppModel(
     @common.Body() data: AppModelCreateInput
   ): Promise<AppModel> {
@@ -52,9 +70,18 @@ export class AppModelControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get()
   @swagger.ApiOkResponse({ type: [AppModel] })
   @ApiNestedQuery(AppModelFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "read",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async appModels(@common.Req() request: Request): Promise<AppModel[]> {
     const args = plainToClass(AppModelFindManyArgs, request.query);
     return this.service.appModels({
@@ -70,9 +97,18 @@ export class AppModelControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id")
   @swagger.ApiOkResponse({ type: AppModel })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "read",
+    possession: "own",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async appModel(
     @common.Param() params: AppModelWhereUniqueInput
   ): Promise<AppModel | null> {
@@ -95,9 +131,18 @@ export class AppModelControllerBase {
     return result;
   }
 
+  @common.UseInterceptors(AclValidateRequestInterceptor)
   @common.Patch("/:id")
   @swagger.ApiOkResponse({ type: AppModel })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async updateAppModel(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() data: AppModelUpdateInput
@@ -128,6 +173,14 @@ export class AppModelControllerBase {
   @common.Delete("/:id")
   @swagger.ApiOkResponse({ type: AppModel })
   @swagger.ApiNotFoundResponse({ type: errors.NotFoundException })
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "delete",
+    possession: "any",
+  })
+  @swagger.ApiForbiddenResponse({
+    type: errors.ForbiddenException,
+  })
   async deleteAppModel(
     @common.Param() params: AppModelWhereUniqueInput
   ): Promise<AppModel | null> {
@@ -153,8 +206,14 @@ export class AppModelControllerBase {
     }
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/apiKey")
   @ApiNestedQuery(ApiKeyFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "ApiKey",
+    action: "read",
+    possession: "any",
+  })
   async findApiKey(
     @common.Req() request: Request,
     @common.Param() params: AppModelWhereUniqueInput
@@ -192,6 +251,11 @@ export class AppModelControllerBase {
   }
 
   @common.Post("/:id/apiKey")
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async connectApiKey(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() body: ApiKeyWhereUniqueInput[]
@@ -209,6 +273,11 @@ export class AppModelControllerBase {
   }
 
   @common.Patch("/:id/apiKey")
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async updateApiKey(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() body: ApiKeyWhereUniqueInput[]
@@ -226,6 +295,11 @@ export class AppModelControllerBase {
   }
 
   @common.Delete("/:id/apiKey")
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async disconnectApiKey(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() body: ApiKeyWhereUniqueInput[]
@@ -242,8 +316,14 @@ export class AppModelControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/credentials")
   @ApiNestedQuery(CredentialFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Credential",
+    action: "read",
+    possession: "any",
+  })
   async findCredentials(
     @common.Req() request: Request,
     @common.Param() params: AppModelWhereUniqueInput
@@ -278,6 +358,11 @@ export class AppModelControllerBase {
   }
 
   @common.Post("/:id/credentials")
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async connectCredentials(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() body: CredentialWhereUniqueInput[]
@@ -295,6 +380,11 @@ export class AppModelControllerBase {
   }
 
   @common.Patch("/:id/credentials")
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async updateCredentials(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() body: CredentialWhereUniqueInput[]
@@ -312,6 +402,11 @@ export class AppModelControllerBase {
   }
 
   @common.Delete("/:id/credentials")
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async disconnectCredentials(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() body: CredentialWhereUniqueInput[]
@@ -328,8 +423,14 @@ export class AppModelControllerBase {
     });
   }
 
+  @common.UseInterceptors(AclFilterResponseInterceptor)
   @common.Get("/:id/webhook")
   @ApiNestedQuery(WebhookFindManyArgs)
+  @nestAccessControl.UseRoles({
+    resource: "Webhook",
+    action: "read",
+    possession: "any",
+  })
   async findWebhook(
     @common.Req() request: Request,
     @common.Param() params: AppModelWhereUniqueInput
@@ -376,6 +477,11 @@ export class AppModelControllerBase {
   }
 
   @common.Post("/:id/webhook")
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async connectWebhook(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() body: WebhookWhereUniqueInput[]
@@ -393,6 +499,11 @@ export class AppModelControllerBase {
   }
 
   @common.Patch("/:id/webhook")
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async updateWebhook(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() body: WebhookWhereUniqueInput[]
@@ -410,6 +521,11 @@ export class AppModelControllerBase {
   }
 
   @common.Delete("/:id/webhook")
+  @nestAccessControl.UseRoles({
+    resource: "AppModel",
+    action: "update",
+    possession: "any",
+  })
   async disconnectWebhook(
     @common.Param() params: AppModelWhereUniqueInput,
     @common.Body() body: WebhookWhereUniqueInput[]
